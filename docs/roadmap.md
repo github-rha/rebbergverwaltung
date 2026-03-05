@@ -1,19 +1,40 @@
 # Roadmap — Rebbergverwaltung
 
-## 0.1.0 — Foundation (pre-season)
+## 0.1.0 — App shell + data model + settings
 
-Get the app shell running and prove the capture-to-analysis loop works end-to-end.
+Scaffold the project, persist data locally, and prove the app shell works.
 
-- [ ] PWA scaffolding (installable, Service Worker, offline shell)
-- [ ] Vineyard & parcel setup (create/select vineyard, define rows)
-- [ ] Video capture screen (MediaRecorder, row/direction metadata, GPS track)
-- [ ] Local storage (IndexedDB for videos and working state)
-- [ ] Upload queue with status tracking (LOCAL_ONLY → UPLOADING)
-- [ ] Settings screen (GitHub repo & PAT, Google API key — stored locally)
+- [x] PWA scaffolding (installable, Service Worker, offline shell)
+- [x] Data model implementation (Vineyard, Scan, RowVideo, VineMap, BbchResult)
+- [x] Storage layer (IndexedDB via idb-keyval)
+- [x] Vineyard setup (create/select vineyard, configurable row count and direction)
+- [x] Settings screen (GitHub repo & PAT, Google API key — stored locally; delete vineyard)
+- [x] Unit & integration tests (data model, storage, CRUD)
+
+**Exit criteria:** App runs locally, vineyard data persists across reloads, settings save/load, tests pass.
+
+---
+
+## 0.1.1 — Video capture + upload queue
+
+Record row videos and queue them for processing.
+
+- [x] Scan CRUD (create/list/delete scans per vineyard)
+- [x] Video capture screen (MediaRecorder, row/direction from vineyard config, GPS start/end)
+- [x] Local video storage (IndexedDB for video blobs)
+- [x] Upload queue with status tracking (LOCAL_ONLY — display only, upload in 0.1.2)
+
+**Exit criteria:** Record a row video, see it queued locally, status updates work.
+
+---
+
+## 0.1.2 — Gemini integration + VineMap + Git sync + CI/CD
+
+Close the capture-to-analysis loop end-to-end.
+
 - [ ] Gemini API integration (send video, receive per-vine BBCH results)
 - [ ] Video processing state machine (UPLOADING → PROCESSING → DONE / FAILED)
 - [ ] VineMap build from early-season scan (vine indices + approximate positions)
-- [ ] Data model implementation (Vineyard, Parcel, Scan, RowVideo, VineMap, BbchResult)
 - [ ] Git-based result storage (commit structured results to repo)
 - [ ] CI/CD pipeline (GitHub Actions → GitHub Pages)
 

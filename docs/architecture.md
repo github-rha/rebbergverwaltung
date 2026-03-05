@@ -131,7 +131,7 @@ Video analysis uses the **Gemini API** with native video understanding:
 |-------|-----------|---------|
 | Client-side | IndexedDB | Videos, working state, upload queue |
 | Credentials | IndexedDB | GitHub repo URL, GitHub PAT, Google API key — stored on-device, never leaves the client except in direct API calls |
-| Structured results | Git repository | Per-vineyard data (BBCH results, VineMap, scan metadata) — versioned, diffable, shareable (same pattern as Kellerverwaltung) |
+| Structured results | Git repository | Per-vineyard data (BBCH results, VineMap, scan metadata) — versioned, diffable, shareable |
 
 ---
 
@@ -187,10 +187,9 @@ The pipeline must identify **individual vines within a row** and output BBCH per
 ### Entities
 
 - **Vineyard** — `id`, `name` (top-level; user can switch between vineyards)
-- **Parcel** — `id`, `vineyard_id`, `name`
-- **Scan** — `id`, `parcel_id`, `created_at`, `note`
+- **Scan** — `id`, `vineyard_id`, `created_at`, `note`
 - **RowVideo** — `id`, `scan_id`, `row_number`, `direction`, `local_uri`, `cloud_uri`, `status`, `created_at`
-- **VineMap** — `id`, `parcel_id`, `row_number`, `vine_index`, `position_m_along_row`, `status` (present | missing | dead), `created_at`
+- **VineMap** — `id`, `vineyard_id`, `row_number`, `vine_index`, `position_m_along_row`, `status` (present | missing | dead), `created_at`
 - **BbchResult** — `id`, `scan_id`, `row_number`, `vine_index`, `bbch_pred`, `confidence`, `model_version`, `created_at`
 
 ---
@@ -321,11 +320,11 @@ connectivity — videos queue until a connection is available.
 | Layer         | Choice             | Rationale                                                  |
 |---------------|--------------------|------------------------------------------------------------|
 | Language      | **TypeScript**     | Type safety for the data model, broad PWA tooling support. |
-| Framework     | **SvelteKit 2 + Svelte 5** | Tiny runtime, fast startup on mobile, built-in static adapter for GitHub Pages. Same stack as Kellerverwaltung. |
+| Framework     | **SvelteKit 2 + Svelte 5** | Tiny runtime, fast startup on mobile, built-in static adapter for GitHub Pages. |
 | Styling       | **Tailwind CSS 4** | Utility-first keeps CSS small, works well with Svelte. |
 | Build tool    | **Vite**           | Fast HMR, tree-shaking, native PWA plugin (`@vite-pwa/sveltekit`). |
 | Local storage | **IndexedDB** (via `idb-keyval`) | Async, handles large video blobs. Works in Safari PWA context. |
-| Remote sync   | **GitHub Contents API** | Same pattern as Kellerverwaltung. PAT auth, manual push/pull. |
+| Remote sync   | **GitHub Contents API** | PAT auth, manual push/pull. |
 | AI            | **Gemini API**     | Native video understanding — no frame extraction needed. Direct client-side calls. |
 | Hosting       | **GitHub Pages**   | Free, zero-ops static hosting via SvelteKit static adapter. |
 | CI            | **GitHub Actions** | Co-located with repo, runs tests and deploys on push to `main`. |
