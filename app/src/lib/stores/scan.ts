@@ -1,10 +1,18 @@
 import { writable } from 'svelte/store'
-import type { Scan, RowVideo, GpsPoint } from '$lib/models/types.js'
+import type {
+	Scan,
+	RowVideo,
+	GpsPoint,
+	BbchResult,
+	VideoStatus
+} from '$lib/models/types.js'
 import { createId, createTimestamp } from '$lib/models/types.js'
 import * as idb from '$lib/storage/idb.js'
+import { processVideo } from '$lib/ai/processor.js'
 
 export const scans = writable<Scan[]>([])
 export const rowVideos = writable<RowVideo[]>([])
+export const bbchResults = writable<BbchResult[]>([])
 
 export async function loadScans(vineyardId: string): Promise<void> {
 	const list = await idb.listScans(vineyardId)
@@ -69,4 +77,31 @@ export async function removeRowVideo(
 ): Promise<void> {
 	await idb.deleteRowVideo(videoId)
 	await loadRowVideos(scanId)
+}
+
+export async function updateVideoStatus(
+	scanId: string,
+	videoId: string,
+	status: VideoStatus
+): Promise<void> {
+	const rv = await idb.loadRowVideo(videoId)
+	if (!rv) return
+	rv.status = status
+	await idb.saveRowVideo(rv)
+	await loadRowVideos(scanId)
+}
+
+export async function processRowVideo(
+	scanId: string,
+	videoId: string,
+	apiKey: string
+): Promise<void> {
+	await processVideo(videoId, apiKey)
+	await loadRowVideos(scanId)
+	await loadBbchResults(scanId)
+}
+
+export async function loadBbchResults(scanId: string): Promise<void> {
+	const list = await idb.loadBbchResults(scanId)
+	bbchResults.set(list)
 }

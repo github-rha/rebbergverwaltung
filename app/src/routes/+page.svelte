@@ -3,6 +3,12 @@
 	import VineyardSelector from '$lib/components/VineyardSelector.svelte'
 	import { currentVineyardId } from '$lib/stores/vineyard.js'
 	import { scans, loadScans } from '$lib/stores/scan.js'
+	import { settings } from '$lib/stores/settings.js'
+	import { pushResults } from '$lib/sync/github.js'
+
+	let syncing = $state(false)
+	let syncError = $state('')
+	let syncSuccess = $state(false)
 
 	$effect(() => {
 		if ($currentVineyardId) {
@@ -14,6 +20,30 @@
 
 	function formatDate(iso: string): string {
 		return new Date(iso).toLocaleDateString()
+	}
+
+	const canSync = $derived(
+		$currentVineyardId && $settings.github_repo && $settings.github_pat
+	)
+
+	async function handleSync() {
+		if (!$currentVineyardId || !canSync) return
+		syncing = true
+		syncError = ''
+		syncSuccess = false
+		try {
+			await pushResults(
+				$currentVineyardId,
+				$settings.github_repo,
+				$settings.github_pat
+			)
+			syncSuccess = true
+			setTimeout(() => (syncSuccess = false), 3000)
+		} catch (err) {
+			syncError = err instanceof Error ? err.message : 'Sync failed'
+		} finally {
+			syncing = false
+		}
 	}
 </script>
 
@@ -35,13 +65,32 @@
 		<div>
 			<div class="flex items-center justify-between mb-2">
 				<h2 class="text-xl font-semibold">Scans</h2>
-				<a
-					href={resolve('/vineyard/[id]/scan/new', { id: $currentVineyardId })}
-					class="bg-green-700 text-white px-3 py-1 rounded text-sm hover:bg-green-800"
-				>
-					New scan
-				</a>
+				<div class="flex gap-2">
+					{#if canSync}
+						<button
+							onclick={handleSync}
+							disabled={syncing}
+							class="border border-green-700 text-green-700 px-3 py-1 rounded text-sm hover:bg-green-50 disabled:opacity-50"
+						>
+							{syncing ? 'Syncing…' : 'Sync'}
+						</button>
+					{/if}
+					<a
+						href={resolve('/vineyard/[id]/scan/new', {
+							id: $currentVineyardId
+						})}
+						class="bg-green-700 text-white px-3 py-1 rounded text-sm hover:bg-green-800"
+					>
+						New scan
+					</a>
+				</div>
 			</div>
+			{#if syncError}
+				<p class="text-red-600 text-sm mb-2">{syncError}</p>
+			{/if}
+			{#if syncSuccess}
+				<p class="text-green-700 text-sm mb-2">Synced to GitHub</p>
+			{/if}
 			{#if $scans.length === 0}
 				<p class="text-gray-500 text-sm">No scans yet.</p>
 			{:else}

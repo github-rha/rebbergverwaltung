@@ -32,13 +32,14 @@ Record row videos and queue them for processing.
 
 Close the capture-to-analysis loop end-to-end.
 
-- [ ] Gemini API integration (send video, receive per-vine BBCH results)
-- [ ] Video processing state machine (UPLOADING → PROCESSING → DONE / FAILED)
-- [ ] VineMap build from early-season scan (vine indices + approximate positions)
-- [ ] Git-based result storage (commit structured results to repo)
-- [ ] CI/CD pipeline (GitHub Actions → GitHub Pages)
+- [x] Gemini API integration (upload video via File API, receive per-vine BBCH results)
+- [x] Video processing state machine (UPLOADING → PROCESSING → DONE / FAILED)
+- [x] BbchResult + VineMap storage in IndexedDB
+- [x] Git-based result sync (push structured JSON to GitHub repo via Contents API)
+- [x] CI/CD pipeline (GitHub Actions → GitHub Pages, custom domain)
+- [x] Scan results view (per-row BBCH badges with color coding)
 
-**Exit criteria:** Record a row, upload, get BBCH results back, see them in the app.
+**Exit criteria:** Record a row, tap Process, get BBCH results back, see them in the app, sync to GitHub.
 
 ---
 

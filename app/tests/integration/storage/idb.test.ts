@@ -16,11 +16,24 @@ import {
 	listRowVideos,
 	saveVideoBlob,
 	loadVideoBlob,
+	saveBbchResult,
+	loadBbchResults,
+	deleteBbchResults,
+	saveVineMapEntries,
+	loadVineMap,
+	deleteVineMap,
 	saveSettings,
 	loadSettings
 } from '$lib/storage/idb.js'
 import { createId, createTimestamp } from '$lib/models/types.js'
-import type { Vineyard, Scan, RowVideo, Settings } from '$lib/models/types.js'
+import type {
+	Vineyard,
+	Scan,
+	RowVideo,
+	BbchResult,
+	VineMap,
+	Settings
+} from '$lib/models/types.js'
 
 beforeEach(async () => {
 	await clear()
@@ -252,6 +265,167 @@ describe('video blob storage', () => {
 
 	it('returns undefined for missing blob', async () => {
 		expect(await loadVideoBlob('nonexistent')).toBeUndefined()
+	})
+})
+
+describe('bbch result CRUD', () => {
+	it('saves and loads results by scan', async () => {
+		const scanId = createId()
+		const r1: BbchResult = {
+			id: createId(),
+			scan_id: scanId,
+			row_number: 1,
+			vine_index: 1,
+			bbch_pred: 55,
+			confidence: 0.9,
+			model_version: 'gemini-2.0-flash',
+			created_at: createTimestamp()
+		}
+		const r2: BbchResult = {
+			id: createId(),
+			scan_id: scanId,
+			row_number: 1,
+			vine_index: 2,
+			bbch_pred: 61,
+			confidence: 0.85,
+			model_version: 'gemini-2.0-flash',
+			created_at: createTimestamp()
+		}
+		const r3: BbchResult = {
+			id: createId(),
+			scan_id: createId(),
+			row_number: 1,
+			vine_index: 1,
+			bbch_pred: 65,
+			confidence: 0.88,
+			model_version: 'gemini-2.0-flash',
+			created_at: createTimestamp()
+		}
+		await saveBbchResult(r1)
+		await saveBbchResult(r2)
+		await saveBbchResult(r3)
+
+		const results = await loadBbchResults(scanId)
+		expect(results).toHaveLength(2)
+		expect(results[0].vine_index).toBe(1)
+		expect(results[1].vine_index).toBe(2)
+	})
+
+	it('deletes results by scan', async () => {
+		const scanId = createId()
+		const r: BbchResult = {
+			id: createId(),
+			scan_id: scanId,
+			row_number: 1,
+			vine_index: 1,
+			bbch_pred: 55,
+			confidence: 0.9,
+			model_version: 'gemini-2.0-flash',
+			created_at: createTimestamp()
+		}
+		await saveBbchResult(r)
+		await deleteBbchResults(scanId)
+		const results = await loadBbchResults(scanId)
+		expect(results).toHaveLength(0)
+	})
+
+	it('deleting a scan cascades to bbch results', async () => {
+		const scanId = createId()
+		const s: Scan = {
+			id: scanId,
+			vineyard_id: createId(),
+			created_at: createTimestamp(),
+			note: ''
+		}
+		const r: BbchResult = {
+			id: createId(),
+			scan_id: scanId,
+			row_number: 1,
+			vine_index: 1,
+			bbch_pred: 55,
+			confidence: 0.9,
+			model_version: 'gemini-2.0-flash',
+			created_at: createTimestamp()
+		}
+		await saveScan(s)
+		await saveBbchResult(r)
+		await deleteScan(scanId)
+		expect(await loadBbchResults(scanId)).toHaveLength(0)
+	})
+})
+
+describe('vine map CRUD', () => {
+	it('saves and loads vine map entries by vineyard', async () => {
+		const vineyardId = createId()
+		const entries: VineMap[] = [
+			{
+				id: createId(),
+				vineyard_id: vineyardId,
+				row_number: 1,
+				vine_index: 1,
+				position_m_along_row: 0.8,
+				status: 'present',
+				created_at: createTimestamp()
+			},
+			{
+				id: createId(),
+				vineyard_id: vineyardId,
+				row_number: 1,
+				vine_index: 2,
+				position_m_along_row: 1.6,
+				status: 'present',
+				created_at: createTimestamp()
+			}
+		]
+		await saveVineMapEntries(entries)
+		const loaded = await loadVineMap(vineyardId)
+		expect(loaded).toHaveLength(2)
+		expect(loaded[0].vine_index).toBe(1)
+		expect(loaded[1].vine_index).toBe(2)
+	})
+
+	it('filters vine map by vineyard', async () => {
+		const v1 = createId()
+		const v2 = createId()
+		await saveVineMapEntries([
+			{
+				id: createId(),
+				vineyard_id: v1,
+				row_number: 1,
+				vine_index: 1,
+				position_m_along_row: 0.8,
+				status: 'present',
+				created_at: createTimestamp()
+			},
+			{
+				id: createId(),
+				vineyard_id: v2,
+				row_number: 1,
+				vine_index: 1,
+				position_m_along_row: 0.8,
+				status: 'present',
+				created_at: createTimestamp()
+			}
+		])
+		expect(await loadVineMap(v1)).toHaveLength(1)
+		expect(await loadVineMap(v2)).toHaveLength(1)
+	})
+
+	it('deletes vine map by vineyard', async () => {
+		const vineyardId = createId()
+		await saveVineMapEntries([
+			{
+				id: createId(),
+				vineyard_id: vineyardId,
+				row_number: 1,
+				vine_index: 1,
+				position_m_along_row: 0.8,
+				status: 'present',
+				created_at: createTimestamp()
+			}
+		])
+		await deleteVineMap(vineyardId)
+		expect(await loadVineMap(vineyardId)).toHaveLength(0)
 	})
 })
 

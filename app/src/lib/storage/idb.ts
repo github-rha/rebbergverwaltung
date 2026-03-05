@@ -1,5 +1,12 @@
 import { get, set, del, keys } from 'idb-keyval'
-import type { Vineyard, Scan, RowVideo, Settings } from '$lib/models/types.js'
+import type {
+	Vineyard,
+	Scan,
+	RowVideo,
+	BbchResult,
+	VineMap,
+	Settings
+} from '$lib/models/types.js'
 
 const SETTINGS_KEY = 'settings'
 
@@ -17,6 +24,14 @@ function rowVideoKey(id: string): string {
 
 function videoBlobKey(id: string): string {
 	return `video-blob:${id}`
+}
+
+function bbchKey(id: string): string {
+	return `bbch:${id}`
+}
+
+function vineMapKey(id: string): string {
+	return `vinemap:${id}`
 }
 
 // --- Vineyards ---
@@ -62,6 +77,7 @@ export async function deleteScan(id: string): Promise<void> {
 		await del(videoBlobKey(v.id))
 		await del(rowVideoKey(v.id))
 	}
+	await deleteBbchResults(id)
 	await del(scanKey(id))
 }
 
@@ -121,6 +137,72 @@ export async function loadVideoBlob(id: string): Promise<Blob | undefined> {
 
 export async function deleteVideoBlob(id: string): Promise<void> {
 	await del(videoBlobKey(id))
+}
+
+// --- BBCH Results ---
+
+export async function saveBbchResult(result: BbchResult): Promise<void> {
+	await set(bbchKey(result.id), result)
+}
+
+export async function loadBbchResults(scanId: string): Promise<BbchResult[]> {
+	const allKeys = await keys()
+	const bKeys = allKeys.filter(
+		(k) => typeof k === 'string' && k.startsWith('bbch:')
+	)
+	const results: BbchResult[] = []
+	for (const k of bKeys) {
+		const r = await get<BbchResult>(k)
+		if (r && r.scan_id === scanId) results.push(r)
+	}
+	return results.sort(
+		(a, b) => a.row_number - b.row_number || a.vine_index - b.vine_index
+	)
+}
+
+export async function deleteBbchResults(scanId: string): Promise<void> {
+	const allKeys = await keys()
+	const bKeys = allKeys.filter(
+		(k) => typeof k === 'string' && k.startsWith('bbch:')
+	)
+	for (const k of bKeys) {
+		const r = await get<BbchResult>(k)
+		if (r && r.scan_id === scanId) await del(k)
+	}
+}
+
+// --- VineMap ---
+
+export async function saveVineMapEntries(entries: VineMap[]): Promise<void> {
+	for (const entry of entries) {
+		await set(vineMapKey(entry.id), entry)
+	}
+}
+
+export async function loadVineMap(vineyardId: string): Promise<VineMap[]> {
+	const allKeys = await keys()
+	const vmKeys = allKeys.filter(
+		(k) => typeof k === 'string' && k.startsWith('vinemap:')
+	)
+	const entries: VineMap[] = []
+	for (const k of vmKeys) {
+		const vm = await get<VineMap>(k)
+		if (vm && vm.vineyard_id === vineyardId) entries.push(vm)
+	}
+	return entries.sort(
+		(a, b) => a.row_number - b.row_number || a.vine_index - b.vine_index
+	)
+}
+
+export async function deleteVineMap(vineyardId: string): Promise<void> {
+	const allKeys = await keys()
+	const vmKeys = allKeys.filter(
+		(k) => typeof k === 'string' && k.startsWith('vinemap:')
+	)
+	for (const k of vmKeys) {
+		const vm = await get<VineMap>(k)
+		if (vm && vm.vineyard_id === vineyardId) await del(k)
+	}
 }
 
 // --- Settings ---

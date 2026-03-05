@@ -1,0 +1,186 @@
+import type { BbchResult } from '$lib/models/types.js'
+import { createId, createTimestamp } from '$lib/models/types.js'
+
+const API_BASE = 'https://generativelanguage.googleapis.com'
+const MODEL = 'gemini-2.0-flash'
+
+interface GeminiVineResult {
+	vine_index: number
+	bbch_pred: number
+	confidence: number
+}
+
+export interface UploadedFile {
+	uri: string
+	mimeType: string
+}
+
+export async function uploadVideo(
+	apiKey: string,
+	blob: Blob
+): Promise<UploadedFile> {
+	const mimeType = blob.type || 'video/mp4'
+
+	const initRes = await fetch(
+		`${API_BASE}/upload/v1beta/files?key=${encodeURIComponent(apiKey)}`,
+		{
+			method: 'POST',
+			headers: {
+				'X-Goog-Upload-Protocol': 'resumable',
+				'X-Goog-Upload-Command': 'start',
+				'X-Goog-Upload-Header-Content-Length': String(blob.size),
+				'X-Goog-Upload-Header-Content-Type': mimeType,
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				file: { display_name: 'row-video' }
+			})
+		}
+	)
+
+	if (!initRes.ok) {
+		throw new Error(`Upload init failed: ${initRes.status}`)
+	}
+
+	const uploadUrl = initRes.headers.get('X-Goog-Upload-URL')
+	if (!uploadUrl) {
+		throw new Error('No upload URL returned')
+	}
+
+	const uploadRes = await fetch(uploadUrl, {
+		method: 'PUT',
+		headers: {
+			'X-Goog-Upload-Command': 'upload, finalize',
+			'X-Goog-Upload-Offset': '0',
+			'Content-Type': mimeType
+		},
+		body: blob
+	})
+
+	if (!uploadRes.ok) {
+		throw new Error(`Upload failed: ${uploadRes.status}`)
+	}
+
+	const uploadData = await uploadRes.json()
+	const fileUri: string = uploadData.file?.uri
+	if (!fileUri) {
+		throw new Error('No file URI in upload response')
+	}
+
+	await waitForFileActive(apiKey, fileUri)
+
+	return { uri: fileUri, mimeType }
+}
+
+async function waitForFileActive(
+	apiKey: string,
+	fileUri: string
+): Promise<void> {
+	const fileName = fileUri.split('/').pop()
+	const maxAttempts = 30
+	for (let i = 0; i < maxAttempts; i++) {
+		const res = await fetch(
+			`${API_BASE}/v1beta/files/${fileName}?key=${encodeURIComponent(apiKey)}`
+		)
+		if (!res.ok) break
+		const data = await res.json()
+		if (data.state === 'ACTIVE') return
+		if (data.state === 'FAILED') throw new Error('File processing failed')
+		await new Promise((r) => setTimeout(r, 2000))
+	}
+}
+
+export async function analyzeRowVideo(
+	apiKey: string,
+	file: UploadedFile,
+	scanId: string,
+	rowNumber: number,
+	vineCount?: number
+): Promise<BbchResult[]> {
+	const vineHint = vineCount
+		? `This row has approximately ${vineCount} vines.`
+		: 'Count and identify each individual vine in the row.'
+
+	const prompt = [
+		'You are analyzing a video of a vineyard row. The camera walks along the row filming the vines.',
+		`This is row ${rowNumber}. ${vineHint}`,
+		'',
+		'For each vine visible in the video, determine:',
+		'- vine_index: sequential number starting from 1 (first vine seen in the video)',
+		'- bbch_pred: the BBCH phenological growth stage (integer, e.g. 9, 11, 55, 65, 71, 77, 81, 85)',
+		'- confidence: your confidence in the BBCH prediction (0.0 to 1.0)',
+		'',
+		'Respond ONLY with a JSON array, no other text:',
+		'[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85}, ...]'
+	].join('\n')
+
+	const res = await fetch(
+		`${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
+		{
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				contents: [
+					{
+						parts: [
+							{
+								file_data: {
+									mime_type: file.mimeType,
+									file_uri: file.uri
+								}
+							},
+							{ text: prompt }
+						]
+					}
+				],
+				generationConfig: {
+					temperature: 0.2,
+					responseMimeType: 'application/json'
+				}
+			})
+		}
+	)
+
+	if (!res.ok) {
+		const text = await res.text()
+		throw new Error(`Gemini API error: ${res.status} ${text}`)
+	}
+
+	const data = await res.json()
+	const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+
+	return parseGeminiResponse(text, scanId, rowNumber)
+}
+
+export function parseGeminiResponse(
+	text: string,
+	scanId: string,
+	rowNumber: number
+): BbchResult[] {
+	const parsed: GeminiVineResult[] = JSON.parse(text)
+
+	if (!Array.isArray(parsed)) {
+		throw new Error('Gemini response is not an array')
+	}
+
+	return parsed.map((item) => {
+		if (
+			typeof item.vine_index !== 'number' ||
+			typeof item.bbch_pred !== 'number' ||
+			typeof item.confidence !== 'number'
+		) {
+			throw new Error('Invalid vine result: missing required fields')
+		}
+
+		return {
+			id: createId(),
+			scan_id: scanId,
+			row_number: rowNumber,
+			vine_index: item.vine_index,
+			bbch_pred: item.bbch_pred,
+			confidence: Math.max(0, Math.min(1, item.confidence)),
+			model_version: MODEL,
+			created_at: createTimestamp()
+		} satisfies BbchResult
+	})
+}
