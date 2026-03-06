@@ -13,6 +13,7 @@ export interface Scan {
 	vineyard_id: string
 	created_at: string
 	note: string
+	is_inventory: boolean
 }
 
 export type VideoStatus =
@@ -47,7 +48,6 @@ export interface VineMap {
 	vineyard_id: string
 	row_number: number
 	vine_index: number
-	position_m_along_row: number
 	status: VineStatus
 	created_at: string
 }

@@ -1,4 +1,4 @@
-import type { BbchResult } from '$lib/models/types.js'
+import type { BbchResult, VineMap, VineStatus } from '$lib/models/types.js'
 import { createId, createTimestamp } from '$lib/models/types.js'
 
 const API_BASE = 'https://generativelanguage.googleapis.com'
@@ -8,11 +8,17 @@ interface GeminiVineResult {
 	vine_index: number
 	bbch_pred: number
 	confidence: number
+	status?: string
 }
 
 export interface UploadedFile {
 	uri: string
 	mimeType: string
+}
+
+export interface AnalysisResult {
+	bbchResults: BbchResult[]
+	vineMapEntries: VineMap[]
 }
 
 export async function uploadVideo(
@@ -95,24 +101,34 @@ export async function analyzeRowVideo(
 	file: UploadedFile,
 	scanId: string,
 	rowNumber: number,
-	vineCount?: number
-): Promise<BbchResult[]> {
-	const vineHint = vineCount
-		? `This row has approximately ${vineCount} vines.`
+	isInventory: boolean,
+	vineContext?: string
+): Promise<AnalysisResult> {
+	const contextHint = vineContext
+		? vineContext
 		: 'Count and identify each individual vine in the row.'
+
+	const statusInstruction = isInventory
+		? '\n- status: "present", "missing", or "dead" (missing = empty space where a vine should be, dead = dead/removed vine stock visible)'
+		: ''
+
+	const statusExample = isInventory ? ', "status": "present"' : ''
 
 	const prompt = [
 		'You are analyzing a video of a vineyard row. The camera walks along the row filming the vines.',
-		`This is row ${rowNumber}. ${vineHint}`,
+		`This is row ${rowNumber}. ${contextHint}`,
 		'',
 		'For each vine visible in the video, determine:',
 		'- vine_index: sequential number starting from 1 (first vine seen in the video)',
 		'- bbch_pred: the BBCH phenological growth stage (integer, e.g. 9, 11, 55, 65, 71, 77, 81, 85)',
 		'- confidence: your confidence in the BBCH prediction (0.0 to 1.0)',
+		statusInstruction,
 		'',
 		'Respond ONLY with a JSON array, no other text:',
-		'[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85}, ...]'
-	].join('\n')
+		`[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85${statusExample}}, ...]`
+	]
+		.filter((l) => l !== '')
+		.join('\n')
 
 	const res = await fetch(
 		`${API_BASE}/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(apiKey)}`,
@@ -149,21 +165,23 @@ export async function analyzeRowVideo(
 	const data = await res.json()
 	const text = data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
-	return parseGeminiResponse(text, scanId, rowNumber)
+	return parseGeminiResponse(text, scanId, rowNumber, isInventory)
 }
 
 export function parseGeminiResponse(
 	text: string,
 	scanId: string,
-	rowNumber: number
-): BbchResult[] {
+	rowNumber: number,
+	isInventory: boolean = false,
+	vineyardId: string = ''
+): AnalysisResult {
 	const parsed: GeminiVineResult[] = JSON.parse(text)
 
 	if (!Array.isArray(parsed)) {
 		throw new Error('Gemini response is not an array')
 	}
 
-	return parsed.map((item) => {
+	const bbchResults: BbchResult[] = parsed.map((item) => {
 		if (
 			typeof item.vine_index !== 'number' ||
 			typeof item.bbch_pred !== 'number' ||
@@ -181,6 +199,25 @@ export function parseGeminiResponse(
 			confidence: Math.max(0, Math.min(1, item.confidence)),
 			model_version: MODEL,
 			created_at: createTimestamp()
-		} satisfies BbchResult
+		}
 	})
+
+	const vineMapEntries: VineMap[] = isInventory
+		? parsed.map((item) => {
+				const status: VineStatus =
+					item.status === 'missing' || item.status === 'dead'
+						? item.status
+						: 'present'
+				return {
+					id: createId(),
+					vineyard_id: vineyardId,
+					row_number: rowNumber,
+					vine_index: item.vine_index,
+					status,
+					created_at: createTimestamp()
+				}
+			})
+		: []
+
+	return { bbchResults, vineMapEntries }
 }

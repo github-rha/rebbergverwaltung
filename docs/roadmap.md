@@ -47,14 +47,17 @@ Close the capture-to-analysis loop end-to-end.
 
 Complete the product for a single user running ~8 scans across one season.
 
-- [ ] Scan results heatmap (Row × Vine BBCH)
-- [ ] Derived layers: "ahead/behind" (deviation from median), heterogeneity
-- [ ] Vine detail screen (BBCH time series across scans)
-- [ ] Later-season tracking using VineMap as positional anchor
-- [ ] Video purge after DONE (free device storage)
-- [ ] CSV export (per scan, per vine time series)
-- [ ] Retry / re-record for FAILED videos
-- [ ] Offline capture with deferred upload (Wi-Fi only option)
+- [x] Inventory scan: early-season VineMap build with per-vine status (present / missing / dead)
+- [x] Gemini prompt includes vine status detection (not just BBCH)
+- [x] VineMap view (inventory of vines per row with status)
+- [x] Scan results heatmap (Row × Vine BBCH)
+- [x] Derived layers: "ahead/behind" (deviation from median), heterogeneity
+- [x] Vine detail screen (BBCH time series across scans)
+- [x] Later-season tracking using VineMap as positional anchor
+- [x] Video purge after DONE (free device storage)
+- [x] CSV export (per scan, per vine time series)
+- [x] Retry / re-record for FAILED videos
+- [x] Offline capture with deferred upload (Wi-Fi only option)
 
 **Exit criteria:** [Success criteria from vision](vision.md#success-criteria) — per-vine BBCH maps at ~8 timepoints, visible zones, exportable data.
 

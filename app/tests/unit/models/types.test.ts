@@ -54,10 +54,12 @@ describe('type contracts', () => {
 			id: createId(),
 			vineyard_id: createId(),
 			created_at: createTimestamp(),
-			note: 'Early season'
+			note: 'Early season',
+			is_inventory: false
 		}
 		expect(s.vineyard_id).toBeTruthy()
 		expect(s.note).toBe('Early season')
+		expect(s.is_inventory).toBe(false)
 	})
 
 	it('RowVideo has valid status', () => {
@@ -108,7 +110,6 @@ describe('type contracts', () => {
 			vineyard_id: createId(),
 			row_number: 3,
 			vine_index: 7,
-			position_m_along_row: 5.6,
 			status: 'present',
 			created_at: createTimestamp()
 		}

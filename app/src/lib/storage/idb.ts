@@ -139,6 +139,15 @@ export async function deleteVideoBlob(id: string): Promise<void> {
 	await del(videoBlobKey(id))
 }
 
+export async function purgeVideoBlob(videoId: string): Promise<void> {
+	await del(videoBlobKey(videoId))
+	const rv = await loadRowVideo(videoId)
+	if (rv) {
+		rv.local_uri = ''
+		await saveRowVideo(rv)
+	}
+}
+
 // --- BBCH Results ---
 
 export async function saveBbchResult(result: BbchResult): Promise<void> {

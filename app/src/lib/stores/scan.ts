@@ -19,12 +19,17 @@ export async function loadScans(vineyardId: string): Promise<void> {
 	scans.set(list)
 }
 
-export async function addScan(vineyardId: string, note: string): Promise<Scan> {
+export async function addScan(
+	vineyardId: string,
+	note: string,
+	isInventory: boolean = false
+): Promise<Scan> {
 	const scan: Scan = {
 		id: createId(),
 		vineyard_id: vineyardId,
 		created_at: createTimestamp(),
-		note
+		note,
+		is_inventory: isInventory
 	}
 	await idb.saveScan(scan)
 	await loadScans(vineyardId)
@@ -104,4 +109,14 @@ export async function processRowVideo(
 export async function loadBbchResults(scanId: string): Promise<void> {
 	const list = await idb.loadBbchResults(scanId)
 	bbchResults.set(list)
+}
+
+export async function purgeVideos(scanId: string): Promise<void> {
+	const videos = await idb.listRowVideos(scanId)
+	for (const v of videos) {
+		if (v.status === 'DONE' && v.local_uri) {
+			await idb.purgeVideoBlob(v.id)
+		}
+	}
+	await loadRowVideos(scanId)
 }

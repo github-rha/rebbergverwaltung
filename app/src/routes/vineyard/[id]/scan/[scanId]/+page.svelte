@@ -9,7 +9,8 @@
 		removeScan,
 		processRowVideo,
 		bbchResults,
-		loadBbchResults
+		loadBbchResults,
+		purgeVideos
 	} from '$lib/stores/scan.js'
 	import { settings } from '$lib/stores/settings.js'
 	import * as idb from '$lib/storage/idb.js'
@@ -23,6 +24,7 @@
 	let confirmingDelete = $state(false)
 	let processingId: string | null = $state(null)
 	let processError: string | null = $state(null)
+	let online = $state(true)
 
 	function dirIcon(dir: string): string {
 		if (!vineyard || vineyard.direction_label === 'top_bottom') {
@@ -36,6 +38,15 @@
 		scan = await idb.loadScan(scanId)
 		await loadRowVideos(scanId)
 		await loadBbchResults(scanId)
+		online = navigator.onLine
+		const onlineHandler = () => (online = true)
+		const offlineHandler = () => (online = false)
+		window.addEventListener('online', onlineHandler)
+		window.addEventListener('offline', offlineHandler)
+		return () => {
+			window.removeEventListener('online', onlineHandler)
+			window.removeEventListener('offline', offlineHandler)
+		}
 	})
 
 	function formatDate(iso: string): string {
@@ -57,6 +68,10 @@
 			processError = 'Set your Google API key in Settings first.'
 			return
 		}
+		if (!online) {
+			processError = 'No internet connection. Process when back online.'
+			return
+		}
 		processingId = videoId
 		processError = null
 		try {
@@ -72,6 +87,10 @@
 		const apiKey = $settings.google_api_key
 		if (!apiKey) {
 			processError = 'Set your Google API key in Settings first.'
+			return
+		}
+		if (!online) {
+			processError = 'No internet connection. Process when back online.'
 			return
 		}
 		processError = null
@@ -90,8 +109,16 @@
 		processingId = null
 	}
 
+	async function handlePurge() {
+		await purgeVideos(scanId)
+	}
+
 	const hasProcessable = $derived(
 		$rowVideos.some((v) => v.status === 'LOCAL_ONLY' || v.status === 'FAILED')
+	)
+
+	const canPurge = $derived(
+		$rowVideos.some((v) => v.status === 'DONE' && v.local_uri)
 	)
 
 	const resultsByRow = $derived.by(() => {
@@ -127,6 +154,12 @@
 			<h2 class="text-xl font-semibold">
 				Scan — {formatDate(scan.created_at)}
 			</h2>
+			{#if scan.is_inventory}
+				<span
+					class="inline-block text-xs px-2 py-0.5 rounded bg-purple-100 text-purple-800 mt-1"
+					>Inventory</span
+				>
+			{/if}
 			{#if scan.note}
 				<p class="text-gray-600 text-sm mt-1">{scan.note}</p>
 			{/if}
@@ -136,6 +169,12 @@
 			<p class="text-red-600 text-sm">{processError}</p>
 		{/if}
 
+		{#if !online}
+			<p class="text-yellow-700 text-sm">
+				Offline — processing requires internet
+			</p>
+		{/if}
+
 		<div>
 			<div class="flex items-center justify-between mb-2">
 				<h3 class="font-medium">Row videos</h3>
@@ -143,7 +182,7 @@
 					{#if hasProcessable}
 						<button
 							onclick={handleProcessAll}
-							disabled={processingId !== null}
+							disabled={processingId !== null || !online}
 							class="bg-blue-700 text-white px-3 py-1 rounded text-sm hover:bg-blue-800 disabled:opacity-50"
 						>
 							Process all
@@ -181,7 +220,7 @@
 								{#if (video.status === 'LOCAL_ONLY' || video.status === 'FAILED') && processingId !== video.id}
 									<button
 										onclick={() => handleProcess(video.id)}
-										disabled={processingId !== null}
+										disabled={processingId !== null || !online}
 										class="text-blue-700 text-xs hover:underline disabled:opacity-50"
 									>
 										{video.status === 'FAILED' ? 'Retry' : 'Process'}
@@ -206,12 +245,32 @@
 						</li>
 					{/each}
 				</ul>
+
+				{#if canPurge}
+					<button
+						onclick={handlePurge}
+						class="mt-2 text-sm text-gray-600 hover:underline"
+					>
+						Purge processed videos (free storage)
+					</button>
+				{/if}
 			{/if}
 		</div>
 
 		{#if resultsByRow.length > 0}
 			<div>
-				<h3 class="font-medium mb-2">Results</h3>
+				<div class="flex items-center justify-between mb-2">
+					<h3 class="font-medium">Results</h3>
+					<a
+						href={resolve('/vineyard/[id]/scan/[scanId]/heatmap', {
+							id: vineyardId,
+							scanId
+						})}
+						class="text-blue-700 text-sm hover:underline"
+					>
+						Heatmap
+					</a>
+				</div>
 				{#each resultsByRow as [rowNum, vines] (rowNum)}
 					<div class="mb-3">
 						<p class="text-sm font-medium text-gray-700 mb-1">
@@ -219,14 +278,21 @@
 						</p>
 						<div class="flex flex-wrap gap-1">
 							{#each vines as vine (vine.vine_index)}
-								<div
-									class="text-xs px-2 py-1 rounded {bbchColor(vine.bbch_pred)}"
+								<a
+									href={resolve('/vineyard/[id]/vine/[row]/[vine]', {
+										id: vineyardId,
+										row: String(rowNum),
+										vine: String(vine.vine_index)
+									})}
+									class="text-xs px-2 py-1 rounded {bbchColor(
+										vine.bbch_pred
+									)} hover:ring-2 ring-blue-400"
 									title="Vine {vine.vine_index}: BBCH {vine.bbch_pred} ({Math.round(
 										vine.confidence * 100
 									)}%)"
 								>
 									{vine.bbch_pred}
-								</div>
+								</a>
 							{/each}
 						</div>
 					</div>

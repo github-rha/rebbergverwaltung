@@ -19,6 +19,7 @@ import {
 	saveBbchResult,
 	loadBbchResults,
 	deleteBbchResults,
+	purgeVideoBlob,
 	saveVineMapEntries,
 	loadVineMap,
 	deleteVineMap,
@@ -101,7 +102,8 @@ describe('scan CRUD', () => {
 			id: createId(),
 			vineyard_id: createId(),
 			created_at: createTimestamp(),
-			note: 'Early season'
+			note: 'Early season',
+			is_inventory: false
 		}
 		await saveScan(s)
 		const loaded = await loadScan(s.id)
@@ -118,19 +120,22 @@ describe('scan CRUD', () => {
 			id: createId(),
 			vineyard_id: vid,
 			created_at: '2026-03-01T10:00:00.000Z',
-			note: 'first'
+			note: 'first',
+			is_inventory: false
 		}
 		const s2: Scan = {
 			id: createId(),
 			vineyard_id: vid,
 			created_at: '2026-03-05T10:00:00.000Z',
-			note: 'second'
+			note: 'second',
+			is_inventory: false
 		}
 		const s3: Scan = {
 			id: createId(),
 			vineyard_id: createId(),
 			created_at: '2026-03-03T10:00:00.000Z',
-			note: 'other vineyard'
+			note: 'other vineyard',
+			is_inventory: false
 		}
 		await saveScan(s1)
 		await saveScan(s2)
@@ -147,7 +152,8 @@ describe('scan CRUD', () => {
 			id: scanId,
 			vineyard_id: createId(),
 			created_at: createTimestamp(),
-			note: ''
+			note: '',
+			is_inventory: false
 		}
 		const rv: RowVideo = {
 			id: createId(),
@@ -335,7 +341,8 @@ describe('bbch result CRUD', () => {
 			id: scanId,
 			vineyard_id: createId(),
 			created_at: createTimestamp(),
-			note: ''
+			note: '',
+			is_inventory: false
 		}
 		const r: BbchResult = {
 			id: createId(),
@@ -363,7 +370,6 @@ describe('vine map CRUD', () => {
 				vineyard_id: vineyardId,
 				row_number: 1,
 				vine_index: 1,
-				position_m_along_row: 0.8,
 				status: 'present',
 				created_at: createTimestamp()
 			},
@@ -372,7 +378,6 @@ describe('vine map CRUD', () => {
 				vineyard_id: vineyardId,
 				row_number: 1,
 				vine_index: 2,
-				position_m_along_row: 1.6,
 				status: 'present',
 				created_at: createTimestamp()
 			}
@@ -393,7 +398,6 @@ describe('vine map CRUD', () => {
 				vineyard_id: v1,
 				row_number: 1,
 				vine_index: 1,
-				position_m_along_row: 0.8,
 				status: 'present',
 				created_at: createTimestamp()
 			},
@@ -402,7 +406,6 @@ describe('vine map CRUD', () => {
 				vineyard_id: v2,
 				row_number: 1,
 				vine_index: 1,
-				position_m_along_row: 0.8,
 				status: 'present',
 				created_at: createTimestamp()
 			}
@@ -419,13 +422,38 @@ describe('vine map CRUD', () => {
 				vineyard_id: vineyardId,
 				row_number: 1,
 				vine_index: 1,
-				position_m_along_row: 0.8,
 				status: 'present',
 				created_at: createTimestamp()
 			}
 		])
 		await deleteVineMap(vineyardId)
 		expect(await loadVineMap(vineyardId)).toHaveLength(0)
+	})
+})
+
+describe('purgeVideoBlob', () => {
+	it('deletes blob and clears local_uri on the row video', async () => {
+		const id = createId()
+		const rv: RowVideo = {
+			id,
+			scan_id: createId(),
+			row_number: 1,
+			direction: 'top_to_bottom',
+			local_uri: `video-blob:${id}`,
+			cloud_uri: '',
+			status: 'DONE',
+			created_at: createTimestamp()
+		}
+		const blob = new Blob(['data'], { type: 'video/mp4' })
+		await saveRowVideo(rv)
+		await saveVideoBlob(id, blob)
+
+		await purgeVideoBlob(id)
+
+		expect(await loadVideoBlob(id)).toBeUndefined()
+		const updated = await loadRowVideo(id)
+		expect(updated).toBeDefined()
+		expect(updated!.local_uri).toBe('')
 	})
 })
 

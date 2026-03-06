@@ -45,7 +45,6 @@ export async function pushResults(
 		vine_map: vineMap.map((v) => ({
 			row_number: v.row_number,
 			vine_index: v.vine_index,
-			position_m_along_row: v.position_m_along_row,
 			status: v.status
 		})),
 		scans: scanData

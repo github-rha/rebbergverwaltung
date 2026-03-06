@@ -7,10 +7,11 @@
 	const vineyardId = $derived(page.params.id)
 
 	let note = $state('')
+	let isInventory = $state(false)
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault()
-		const scan = await addScan(vineyardId, note.trim())
+		const scan = await addScan(vineyardId, note.trim(), isInventory)
 		await goto(
 			resolve('/vineyard/[id]/scan/[scanId]', {
 				id: vineyardId,
@@ -35,6 +36,22 @@
 				placeholder="e.g. after rain, leaf removal last week"
 				class="mt-1 block w-full border border-gray-300 rounded px-3 py-2"
 			/>
+		</div>
+
+		<div class="flex items-start gap-2">
+			<input
+				id="inventory"
+				type="checkbox"
+				bind:checked={isInventory}
+				class="mt-1"
+			/>
+			<label for="inventory" class="text-sm text-gray-700">
+				<span class="font-medium">Inventory scan</span>
+				<span class="block text-gray-500"
+					>First scan of the season. Records which vines are present, missing,
+					or dead.</span
+				>
+			</label>
 		</div>
 
 		<button

@@ -27,23 +27,45 @@ export async function processVideo(
 		await setStatus(videoId, 'PROCESSING')
 
 		const scan = await idb.loadScan(rv.scan_id)
-		let vineCount: number | undefined
+		const isInventory = scan?.is_inventory ?? false
+		let vineContext: string | undefined
+		let vineyardId = ''
+
 		if (scan) {
-			const allVineMap = await idb.loadVineMap(scan.vineyard_id)
-			const rowVines = allVineMap.filter((v) => v.row_number === rv.row_number)
-			if (rowVines.length > 0) vineCount = rowVines.length
+			vineyardId = scan.vineyard_id
+			const vineMap = await idb.loadVineMap(scan.vineyard_id)
+			const rowVines = vineMap.filter((v) => v.row_number === rv.row_number)
+			if (rowVines.length > 0 && !isInventory) {
+				const present = rowVines.filter((v) => v.status === 'present').length
+				const details = rowVines
+					.filter((v) => v.status !== 'present')
+					.map((v) => `vine ${v.vine_index} is ${v.status}`)
+				vineContext = `This row has ${rowVines.length} vines (${present} present).`
+				if (details.length > 0) {
+					vineContext += ` ${details.join(', ')}.`
+				}
+			}
 		}
 
-		const results = await analyzeRowVideo(
+		const result = await analyzeRowVideo(
 			apiKey,
 			file,
 			rv.scan_id,
 			rv.row_number,
-			vineCount
+			isInventory,
+			vineContext
 		)
 
-		for (const result of results) {
-			await idb.saveBbchResult(result)
+		for (const bbch of result.bbchResults) {
+			await idb.saveBbchResult(bbch)
+		}
+
+		if (isInventory && result.vineMapEntries.length > 0) {
+			const entries = result.vineMapEntries.map((e) => ({
+				...e,
+				vineyard_id: vineyardId
+			}))
+			await idb.saveVineMapEntries(entries)
 		}
 
 		await setStatus(videoId, 'DONE')
