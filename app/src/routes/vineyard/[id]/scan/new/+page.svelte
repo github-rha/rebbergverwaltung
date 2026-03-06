@@ -48,8 +48,7 @@
 			<label for="inventory" class="text-sm text-gray-700">
 				<span class="font-medium">Inventory scan</span>
 				<span class="block text-gray-500"
-					>First scan of the season. Records which vines are present, missing,
-					or dead.</span
+					>First scan of the season. Records which vines are present or missing.</span
 				>
 			</label>
 		</div>

@@ -41,7 +41,7 @@ export interface RowVideo {
 	created_at: string
 }
 
-export type VineStatus = 'present' | 'missing' | 'dead'
+export type VineStatus = 'present' | 'missing'
 
 export interface VineMap {
 	id: string

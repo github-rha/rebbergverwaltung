@@ -104,7 +104,7 @@ describe('type contracts', () => {
 	})
 
 	it('VineMap has valid status', () => {
-		const statuses: VineStatus[] = ['present', 'missing', 'dead']
+		const statuses: VineStatus[] = ['present', 'missing']
 		const vm: VineMap = {
 			id: createId(),
 			vineyard_id: createId(),

@@ -33,11 +33,8 @@
 	const missingCount = $derived(
 		entries.filter((e) => e.status === 'missing').length
 	)
-	const deadCount = $derived(entries.filter((e) => e.status === 'dead').length)
-
 	function statusColor(status: string): string {
 		if (status === 'present') return 'bg-green-200 text-green-800'
-		if (status === 'dead') return 'bg-red-200 text-red-800'
 		return 'bg-gray-200 text-gray-600'
 	}
 </script>
@@ -57,9 +54,6 @@
 			<span class="text-green-700">{presentCount} present</span>
 			{#if missingCount > 0}
 				<span class="text-gray-500">{missingCount} missing</span>
-			{/if}
-			{#if deadCount > 0}
-				<span class="text-red-700">{deadCount} dead</span>
 			{/if}
 		</div>
 

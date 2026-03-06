@@ -109,7 +109,7 @@ export async function analyzeRowVideo(
 		: 'Count and identify each individual vine in the row.'
 
 	const statusInstruction = isInventory
-		? '\n- status: "present", "missing", or "dead" (missing = empty space where a vine should be, dead = dead/removed vine stock visible)'
+		? '\n- status: "present" or "missing" (missing = empty space where a vine should be)'
 		: ''
 
 	const statusExample = isInventory ? ', "status": "present"' : ''
@@ -205,9 +205,7 @@ export function parseGeminiResponse(
 	const vineMapEntries: VineMap[] = isInventory
 		? parsed.map((item) => {
 				const status: VineStatus =
-					item.status === 'missing' || item.status === 'dead'
-						? item.status
-						: 'present'
+					item.status === 'missing' ? 'missing' : 'present'
 				return {
 					id: createId(),
 					vineyard_id: vineyardId,

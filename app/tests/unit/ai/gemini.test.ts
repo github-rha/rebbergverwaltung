@@ -67,8 +67,7 @@ describe('parseGeminiResponse', () => {
 		const vineyardId = createId()
 		const text = JSON.stringify([
 			{ vine_index: 1, bbch_pred: 9, confidence: 0.8, status: 'present' },
-			{ vine_index: 2, bbch_pred: 0, confidence: 0.9, status: 'missing' },
-			{ vine_index: 3, bbch_pred: 9, confidence: 0.7, status: 'dead' }
+			{ vine_index: 2, bbch_pred: 0, confidence: 0.9, status: 'missing' }
 		])
 
 		const result = parseGeminiResponse(
@@ -79,14 +78,13 @@ describe('parseGeminiResponse', () => {
 			vineyardId
 		)
 
-		expect(result.bbchResults).toHaveLength(3)
-		expect(result.vineMapEntries).toHaveLength(3)
+		expect(result.bbchResults).toHaveLength(2)
+		expect(result.vineMapEntries).toHaveLength(2)
 		expect(result.vineMapEntries[0].vineyard_id).toBe(vineyardId)
 		expect(result.vineMapEntries[0].row_number).toBe(rowNumber)
 		expect(result.vineMapEntries[0].vine_index).toBe(1)
 		expect(result.vineMapEntries[0].status).toBe('present')
 		expect(result.vineMapEntries[1].status).toBe('missing')
-		expect(result.vineMapEntries[2].status).toBe('dead')
 	})
 
 	it('defaults unknown status to present in inventory mode', () => {
