@@ -18,6 +18,7 @@
 		model: string
 	}[] = $state([])
 	let vineStatus: VineMap | undefined = $state(undefined)
+	let maxVineInRow = $state(1)
 
 	onMount(async () => {
 		const scans = await idb.listScans(vineyardId)
@@ -37,6 +38,11 @@
 					model: match.model_version
 				})
 			}
+			for (const r of results) {
+				if (r.row_number === rowNumber && r.vine_index > maxVineInRow) {
+					maxVineInRow = r.vine_index
+				}
+			}
 		}
 
 		timeSeries = series.sort(
@@ -47,6 +53,11 @@
 		vineStatus = vineMap.find(
 			(v) => v.row_number === rowNumber && v.vine_index === vineIndex
 		)
+		for (const v of vineMap) {
+			if (v.row_number === rowNumber && v.vine_index > maxVineInRow) {
+				maxVineInRow = v.vine_index
+			}
+		}
 	})
 
 	function formatDate(iso: string): string {
@@ -62,9 +73,35 @@
 
 <div class="space-y-6">
 	<div>
-		<h2 class="text-xl font-semibold">
-			Row {rowNumber}, Vine {vineIndex}
-		</h2>
+		<div class="flex items-center gap-3">
+			{#if vineIndex > 1}
+				<a
+					href={resolve('/vineyard/[id]/vine/[row]/[vine]', {
+						id: vineyardId,
+						row: String(rowNumber),
+						vine: String(vineIndex - 1)
+					})}
+					class="text-green-700 text-xl hover:text-green-900"
+				>←</a>
+			{:else}
+				<span class="text-gray-300 text-xl">←</span>
+			{/if}
+			<h2 class="text-xl font-semibold">
+				Row {rowNumber}, Vine {vineIndex}
+			</h2>
+			{#if vineIndex < maxVineInRow}
+				<a
+					href={resolve('/vineyard/[id]/vine/[row]/[vine]', {
+						id: vineyardId,
+						row: String(rowNumber),
+						vine: String(vineIndex + 1)
+					})}
+					class="text-green-700 text-xl hover:text-green-900"
+				>→</a>
+			{:else}
+				<span class="text-gray-300 text-xl">→</span>
+			{/if}
+		</div>
 		{#if vineStatus}
 			<span
 				class="inline-block text-xs px-2 py-0.5 rounded mt-1 {vineStatus.status ===
