@@ -3,6 +3,7 @@
 	import { page } from '$app/state'
 	import { onMount } from 'svelte'
 	import * as idb from '$lib/storage/idb.js'
+	import { formatBbch } from '$lib/models/types.js'
 	import type { VineMap } from '$lib/models/types.js'
 
 	const vineyardId = $derived(page.params.id)
@@ -82,7 +83,7 @@
 			<div class="flex items-end gap-1 h-32">
 				{#each timeSeries as point, i (i)}
 					<div class="flex flex-col items-center flex-1">
-						<span class="text-xs text-gray-700 mb-1">{point.bbch}</span>
+						<span class="text-xs text-gray-700 mb-1">{formatBbch(point.bbch)}</span>
 						<div
 							class="w-full bg-green-600 rounded-t"
 							style="height: {barHeight(point.bbch)}%"
@@ -112,7 +113,7 @@
 					{#each timeSeries as point, i (i)}
 						<tr class="border-t border-gray-100">
 							<td class="py-1">{formatDate(point.date)}</td>
-							<td class="py-1 font-medium">{point.bbch}</td>
+							<td class="py-1 font-medium">{formatBbch(point.bbch)}</td>
 							<td class="py-1">{Math.round(point.confidence * 100)}%</td>
 							<td class="py-1 text-gray-400 text-xs">{point.model}</td>
 						</tr>

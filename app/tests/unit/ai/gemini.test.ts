@@ -8,8 +8,8 @@ describe('parseGeminiResponse', () => {
 
 	it('parses a valid response into BbchResult array', () => {
 		const text = JSON.stringify([
-			{ vine_index: 1, bbch_pred: 55, confidence: 0.92 },
-			{ vine_index: 2, bbch_pred: 61, confidence: 0.87 },
+			{ vine_index: 1, bbch_pred: 55, confidence: 0.92, timestamp_sec: 1.5 },
+			{ vine_index: 2, bbch_pred: 61, confidence: 0.87, timestamp_sec: 4.2 },
 			{ vine_index: 3, bbch_pred: 55, confidence: 0.95 }
 		])
 
@@ -21,9 +21,11 @@ describe('parseGeminiResponse', () => {
 		expect(result.bbchResults[0].vine_index).toBe(1)
 		expect(result.bbchResults[0].bbch_pred).toBe(55)
 		expect(result.bbchResults[0].confidence).toBe(0.92)
+		expect(result.bbchResults[0].timestamp_sec).toBe(1.5)
 		expect(result.bbchResults[0].model_version).toBe('gemini-2.5-flash')
 		expect(result.bbchResults[0].id).toBeTruthy()
 		expect(result.bbchResults[0].created_at).toBeTruthy()
+		expect(result.bbchResults[2].timestamp_sec).toBeUndefined()
 		expect(result.vineMapEntries).toHaveLength(0)
 	})
 

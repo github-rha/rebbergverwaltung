@@ -7,6 +7,7 @@
 		computeDeviation,
 		computeRowHeterogeneity
 	} from '$lib/analysis/derived.js'
+	import { formatBbch } from '$lib/models/types.js'
 	import type { BbchResult, Scan } from '$lib/models/types.js'
 
 	const vineyardId = $derived(page.params.id)
@@ -142,10 +143,10 @@
 											})}
 											class="block w-6 h-6 text-center leading-6 text-[10px]"
 											style="background-color: {bgColor}"
-											title="Row {row}, Vine {vine}: BBCH {r.bbch_pred}"
+											title="Row {row}, Vine {vine}: BBCH {formatBbch(r.bbch_pred)}"
 										>
 											{mode === 'bbch'
-												? r.bbch_pred
+												? formatBbch(r.bbch_pred)
 												: mode === 'deviation'
 													? (dev ?? 0) > 0
 														? `+${Math.round(dev ?? 0)}`

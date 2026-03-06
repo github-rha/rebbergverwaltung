@@ -59,6 +59,7 @@ export interface BbchResult {
 	vine_index: number
 	bbch_pred: number
 	confidence: number
+	timestamp_sec?: number
 	model_version: string
 	created_at: string
 }
@@ -67,6 +68,10 @@ export interface Settings {
 	github_repo: string
 	github_pat: string
 	google_api_key: string
+}
+
+export function formatBbch(bbch: number): string {
+	return String(bbch).padStart(2, '0')
 }
 
 export function createId(): string {

@@ -8,6 +8,7 @@ interface GeminiVineResult {
 	vine_index: number
 	bbch_pred: number
 	confidence: number
+	timestamp_sec?: number
 	status?: string
 }
 
@@ -129,10 +130,11 @@ export async function analyzeRowVideo(
 		'- vine_index: sequential number starting from 1 (first vine seen in the video)',
 		'- bbch_pred: the BBCH phenological growth stage (integer, e.g. 9, 11, 55, 65, 71, 77, 81, 85)',
 		'- confidence: your confidence in the BBCH prediction (0.0 to 1.0)',
+		'- timestamp_sec: the time in seconds (decimal) when this vine is best visible in the video',
 		statusInstruction,
 		'',
 		'Respond ONLY with a JSON array, no other text:',
-		`[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85${statusExample}}, ...]`
+		`[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85, "timestamp_sec": 3.2${statusExample}}, ...]`
 	]
 		.filter((l) => l !== '')
 		.join('\n')
@@ -204,6 +206,7 @@ export function parseGeminiResponse(
 			vine_index: item.vine_index,
 			bbch_pred: item.bbch_pred,
 			confidence: Math.max(0, Math.min(1, item.confidence)),
+			timestamp_sec: typeof item.timestamp_sec === 'number' ? item.timestamp_sec : undefined,
 			model_version: MODEL,
 			created_at: createTimestamp()
 		}

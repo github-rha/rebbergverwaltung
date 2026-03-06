@@ -15,6 +15,7 @@
 	} from '$lib/stores/scan.js'
 	import { settings } from '$lib/stores/settings.js'
 	import * as idb from '$lib/storage/idb.js'
+	import { formatBbch } from '$lib/models/types.js'
 	import type { Scan, Vineyard } from '$lib/models/types.js'
 
 	const vineyardId = $derived(page.params.id)
@@ -321,11 +322,11 @@
 									class="text-xs px-2 py-1 rounded {bbchColor(
 										vine.bbch_pred
 									)} hover:ring-2 ring-blue-400"
-									title="Vine {vine.vine_index}: BBCH {vine.bbch_pred} ({Math.round(
+									title="Vine {vine.vine_index}: BBCH {formatBbch(vine.bbch_pred)} ({Math.round(
 										vine.confidence * 100
 									)}%)"
 								>
-									{vine.bbch_pred}
+									{formatBbch(vine.bbch_pred)}
 								</a>
 							{/each}
 						</div>
