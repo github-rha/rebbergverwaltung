@@ -8,6 +8,7 @@
 		loadRowVideos,
 		removeScan,
 		processRowVideo,
+		addRowVideo,
 		bbchResults,
 		loadBbchResults,
 		purgeVideos
@@ -25,6 +26,8 @@
 	let processingId: string | null = $state(null)
 	let processError: string | null = $state(null)
 	let online = $state(true)
+	let fileInput: HTMLInputElement | undefined = $state(undefined)
+	let uploadingFile = $state(false)
 
 	function dirIcon(dir: string): string {
 		if (!vineyard || vineyard.direction_label === 'top_bottom') {
@@ -113,6 +116,23 @@
 		await purgeVideos(scanId)
 	}
 
+	async function handleFileUpload(e: Event) {
+		const input = e.target as HTMLInputElement
+		const file = input.files?.[0]
+		if (!file) return
+		const rowNumber = prompt('Row number?', '1')
+		if (!rowNumber) return
+		const row = parseInt(rowNumber, 10)
+		if (isNaN(row) || row < 1) return
+		uploadingFile = true
+		try {
+			await addRowVideo(scanId, row, 'top_to_bottom', file)
+		} finally {
+			uploadingFile = false
+			input.value = ''
+		}
+	}
+
 	const hasProcessable = $derived(
 		$rowVideos.some((v) => v.status === 'LOCAL_ONLY' || v.status === 'FAILED')
 	)
@@ -188,6 +208,13 @@
 							Process all
 						</button>
 					{/if}
+					<button
+						onclick={() => fileInput?.click()}
+						disabled={uploadingFile}
+						class="border border-green-700 text-green-700 px-3 py-1 rounded text-sm hover:bg-green-50 disabled:opacity-50"
+					>
+						{uploadingFile ? 'Uploading…' : 'Upload video'}
+					</button>
 					<a
 						href={resolve('/vineyard/[id]/scan/[scanId]/record', {
 							id: vineyardId,
@@ -197,6 +224,13 @@
 					>
 						Record row
 					</a>
+					<input
+						bind:this={fileInput}
+						type="file"
+						accept="video/*"
+						onchange={handleFileUpload}
+						class="hidden"
+					/>
 				</div>
 			</div>
 
