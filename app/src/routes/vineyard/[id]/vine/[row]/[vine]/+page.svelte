@@ -14,6 +14,7 @@
 		date: string
 		bbch: number
 		confidence: number
+		timestamp_sec?: number
 		model: string
 	}[] = $state([])
 	let vineStatus: VineMap | undefined = $state(undefined)
@@ -32,6 +33,7 @@
 					date: scan.created_at,
 					bbch: match.bbch_pred,
 					confidence: match.confidence,
+					timestamp_sec: match.timestamp_sec,
 					model: match.model_version
 				})
 			}
@@ -106,6 +108,7 @@
 						<th class="py-1">Date</th>
 						<th class="py-1">BBCH</th>
 						<th class="py-1">Conf.</th>
+						<th class="py-1">Time</th>
 						<th class="py-1">Model</th>
 					</tr>
 				</thead>
@@ -115,6 +118,7 @@
 							<td class="py-1">{formatDate(point.date)}</td>
 							<td class="py-1 font-medium">{formatBbch(point.bbch)}</td>
 							<td class="py-1">{Math.round(point.confidence * 100)}%</td>
+							<td class="py-1 text-gray-400">{point.timestamp_sec != null ? `${point.timestamp_sec.toFixed(1)}s` : '—'}</td>
 							<td class="py-1 text-gray-400 text-xs">{point.model}</td>
 						</tr>
 					{/each}
