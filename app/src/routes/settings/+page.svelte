@@ -7,6 +7,7 @@
 		removeVineyard,
 		selectVineyard
 	} from '$lib/stores/vineyard.js'
+	import { MODEL } from '$lib/ai/gemini.js'
 
 	let form = $derived.by(() => ({ ...$settings }))
 	let saved = $state(false)
@@ -90,6 +91,10 @@
 			{/if}
 		</div>
 	</form>
+
+	<div class="border-t pt-4">
+		<p class="text-sm text-gray-500">AI model: <span class="font-mono">{MODEL}</span></p>
+	</div>
 
 	{#if $vineyards.length > 0}
 		<div class="border-t pt-6">
