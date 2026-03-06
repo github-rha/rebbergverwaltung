@@ -22,7 +22,7 @@ describe('parseGeminiResponse', () => {
 		expect(result.bbchResults[0].bbch_pred).toBe(55)
 		expect(result.bbchResults[0].confidence).toBe(0.92)
 		expect(result.bbchResults[0].timestamp_sec).toBe(1.5)
-		expect(result.bbchResults[0].model_version).toBe('gemini-2.5-flash')
+		expect(result.bbchResults[0].model_version).toBe('gemini-3.1-flash')
 		expect(result.bbchResults[0].id).toBeTruthy()
 		expect(result.bbchResults[0].created_at).toBeTruthy()
 		expect(result.bbchResults[2].timestamp_sec).toBeUndefined()
