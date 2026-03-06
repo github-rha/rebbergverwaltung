@@ -123,6 +123,7 @@ export async function analyzeRowVideo(
 		'- Do NOT count tall (~2m) wooden posts that hold guide wires — these are infrastructure.',
 		'- Do NOT count small wooden support poles next to individual vines — each vine may have one, but the pole is not a vine.',
 		'- DO count young vines protected by a green plastic cylinder (grow tube) — these are vines.',
+		'- Each row starts with a diagonal tension wire running from the ground up to the first pole. The first vine comes AFTER this wire. Do not count anything before it.',
 		'',
 		'For each vine visible in the video, determine:',
 		'- vine_index: sequential number starting from 1 (first vine seen in the video)',
