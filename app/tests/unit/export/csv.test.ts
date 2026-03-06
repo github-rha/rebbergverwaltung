@@ -33,7 +33,7 @@ function makeResult(
 		vine_index: vine,
 		bbch_pred: bbch,
 		confidence: 0.9,
-		model_version: 'gemini-3.0-flash',
+		model_version: 'gemini-2.5-flash',
 		created_at: createTimestamp()
 	}
 }

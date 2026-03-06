@@ -2,7 +2,7 @@ import type { BbchResult, VineMap, VineStatus } from '$lib/models/types.js'
 import { createId, createTimestamp } from '$lib/models/types.js'
 
 const API_BASE = 'https://generativelanguage.googleapis.com'
-const MODEL = 'gemini-3.0-flash'
+const MODEL = 'gemini-2.5-flash'
 
 interface GeminiVineResult {
 	vine_index: number

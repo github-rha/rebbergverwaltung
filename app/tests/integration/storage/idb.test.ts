@@ -284,7 +284,7 @@ describe('bbch result CRUD', () => {
 			vine_index: 1,
 			bbch_pred: 55,
 			confidence: 0.9,
-			model_version: 'gemini-3.0-flash',
+			model_version: 'gemini-2.5-flash',
 			created_at: createTimestamp()
 		}
 		const r2: BbchResult = {
@@ -294,7 +294,7 @@ describe('bbch result CRUD', () => {
 			vine_index: 2,
 			bbch_pred: 61,
 			confidence: 0.85,
-			model_version: 'gemini-3.0-flash',
+			model_version: 'gemini-2.5-flash',
 			created_at: createTimestamp()
 		}
 		const r3: BbchResult = {
@@ -304,7 +304,7 @@ describe('bbch result CRUD', () => {
 			vine_index: 1,
 			bbch_pred: 65,
 			confidence: 0.88,
-			model_version: 'gemini-3.0-flash',
+			model_version: 'gemini-2.5-flash',
 			created_at: createTimestamp()
 		}
 		await saveBbchResult(r1)
@@ -326,7 +326,7 @@ describe('bbch result CRUD', () => {
 			vine_index: 1,
 			bbch_pred: 55,
 			confidence: 0.9,
-			model_version: 'gemini-3.0-flash',
+			model_version: 'gemini-2.5-flash',
 			created_at: createTimestamp()
 		}
 		await saveBbchResult(r)
@@ -351,7 +351,7 @@ describe('bbch result CRUD', () => {
 			vine_index: 1,
 			bbch_pred: 55,
 			confidence: 0.9,
-			model_version: 'gemini-3.0-flash',
+			model_version: 'gemini-2.5-flash',
 			created_at: createTimestamp()
 		}
 		await saveScan(s)
