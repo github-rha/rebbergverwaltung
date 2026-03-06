@@ -125,7 +125,7 @@ describe('type contracts', () => {
 			vine_index: 3,
 			bbch_pred: 65,
 			confidence: 0.92,
-			model_version: 'gemini-2.0-flash',
+			model_version: 'gemini-3.0-flash',
 			created_at: createTimestamp()
 		}
 		expect(br.bbch_pred).toBe(65)
