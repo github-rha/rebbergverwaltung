@@ -7,6 +7,7 @@ import type {
 	VineMap,
 	Settings
 } from '$lib/models/types.js'
+import type { SkippedItem } from '$lib/ai/gemini.js'
 
 const SETTINGS_KEY = 'settings'
 
@@ -75,6 +76,7 @@ export async function deleteScan(id: string): Promise<void> {
 	const videos = await listRowVideos(id)
 	for (const v of videos) {
 		await del(videoBlobKey(v.id))
+		await del(skippedKey(v.id))
 		await del(rowVideoKey(v.id))
 	}
 	await deleteThumbnails(id)
@@ -239,6 +241,25 @@ export async function deleteThumbnails(scanId: string): Promise<void> {
 	for (const r of results) {
 		await del(thumbnailKey(r.id))
 	}
+}
+
+// --- Skipped Items ---
+
+function skippedKey(videoId: string): string {
+	return `skipped:${videoId}`
+}
+
+export async function saveSkippedItems(
+	videoId: string,
+	items: SkippedItem[]
+): Promise<void> {
+	await set(skippedKey(videoId), items)
+}
+
+export async function loadSkippedItems(
+	videoId: string
+): Promise<SkippedItem[]> {
+	return (await get<SkippedItem[]>(skippedKey(videoId))) ?? []
 }
 
 // --- Settings ---

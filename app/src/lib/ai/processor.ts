@@ -67,6 +67,10 @@ export async function processVideo(
 			await idb.saveBbchResult(bbch)
 		}
 
+		if (result.skipped.length > 0) {
+			await idb.saveSkippedItems(videoId, result.skipped)
+		}
+
 		const total = result.bbchResults.length
 		for (let i = 0; i < total; i++) {
 			const bbch = result.bbchResults[i]

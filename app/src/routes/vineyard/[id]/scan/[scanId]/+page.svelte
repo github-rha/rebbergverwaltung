@@ -17,6 +17,7 @@
 	import * as idb from '$lib/storage/idb.js'
 	import { formatBbch } from '$lib/models/types.js'
 	import type { Scan, Vineyard } from '$lib/models/types.js'
+	import type { SkippedItem } from '$lib/ai/gemini.js'
 
 	const vineyardId = $derived(page.params.id)
 	const scanId = $derived(page.params.scanId)
@@ -32,6 +33,7 @@
 	let online = $state(true)
 	let fileInput: HTMLInputElement | undefined = $state(undefined)
 	let uploadingFile = $state(false)
+	let skippedByVideo: Record<string, SkippedItem[]> = $state({})
 
 	function startTimer() {
 		elapsedSec = 0
@@ -52,11 +54,22 @@
 		return dir === 'top_to_bottom' ? '\u2192' : '\u2190'
 	}
 
+	async function loadAllSkipped() {
+		const videos = await idb.listRowVideos(scanId)
+		const result: Record<string, SkippedItem[]> = {}
+		for (const v of videos) {
+			const items = await idb.loadSkippedItems(v.id)
+			if (items.length > 0) result[v.id] = items
+		}
+		skippedByVideo = result
+	}
+
 	onMount(async () => {
 		vineyard = await idb.loadVineyard(vineyardId)
 		scan = await idb.loadScan(scanId)
 		await loadRowVideos(scanId)
 		await loadBbchResults(scanId)
+		await loadAllSkipped()
 		online = navigator.onLine
 		const onlineHandler = () => (online = true)
 		const offlineHandler = () => (online = false)
@@ -99,6 +112,7 @@
 			await processRowVideo(scanId, videoId, apiKey, (step) => {
 				processStep = step
 			})
+			await loadAllSkipped()
 		} catch (err) {
 			processError = err instanceof Error ? err.message : 'Processing failed'
 		} finally {
@@ -138,6 +152,7 @@
 		stopTimer()
 		processingId = null
 		processStep = ''
+		await loadAllSkipped()
 	}
 
 	async function handlePurge() {
@@ -185,6 +200,17 @@
 		return Object.entries(grouped)
 			.map(([k, v]) => [Number(k), v] as const)
 			.sort((a, b) => a[0] - b[0])
+	})
+
+	const skippedByRow = $derived.by(() => {
+		const result: { row_number: number; items: SkippedItem[] }[] = []
+		for (const video of $rowVideos) {
+			const items = skippedByVideo[video.id]
+			if (items && items.length > 0) {
+				result.push({ row_number: video.row_number, items })
+			}
+		}
+		return result.sort((a, b) => a.row_number - b.row_number)
 	})
 
 	function bbchColor(bbch: number): string {
@@ -360,6 +386,29 @@
 								</a>
 							{/each}
 						</div>
+					</div>
+				{/each}
+			</div>
+		{/if}
+
+		{#if skippedByRow.length > 0}
+			<div>
+				<h3 class="font-medium mb-2">Skipped (not counted as vines)</h3>
+				{#each skippedByRow as { row_number, items } (row_number)}
+					<div class="mb-2">
+						<p class="text-sm font-medium text-gray-700 mb-1">
+							Row {row_number}
+						</p>
+						<ul class="text-xs text-gray-600 space-y-0.5">
+							{#each items as item, i (i)}
+								<li>
+									<span class="text-gray-400"
+										>{item.timestamp_sec.toFixed(1)}s</span
+									>
+									— {item.reason}
+								</li>
+							{/each}
+						</ul>
 					</div>
 				{/each}
 			</div>

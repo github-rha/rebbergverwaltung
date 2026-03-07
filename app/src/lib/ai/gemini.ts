@@ -2,7 +2,7 @@ import type { BbchResult, VineMap, VineStatus } from '$lib/models/types.js'
 import { createId, createTimestamp } from '$lib/models/types.js'
 
 const API_BASE = 'https://generativelanguage.googleapis.com'
-export const MODEL = 'gemini-2.5-pro'
+export const MODEL = 'gemini-2.5-flash'
 
 interface GeminiVineResult {
 	vine_index: number
@@ -10,6 +10,16 @@ interface GeminiVineResult {
 	confidence: number
 	timestamp_sec?: number
 	status?: string
+}
+
+interface GeminiSkippedItem {
+	timestamp_sec: number
+	reason: string
+}
+
+export interface SkippedItem {
+	timestamp_sec: number
+	reason: string
 }
 
 export interface UploadedFile {
@@ -20,6 +30,7 @@ export interface UploadedFile {
 export interface AnalysisResult {
 	bbchResults: BbchResult[]
 	vineMapEntries: VineMap[]
+	skipped: SkippedItem[]
 }
 
 export async function uploadVideo(
@@ -116,25 +127,29 @@ export async function analyzeRowVideo(
 	const statusExample = isInventory ? ', "status": "present"' : ''
 
 	const prompt = [
-		'You are analyzing a video of a vineyard row. The camera walks along the row filming the vines.',
+		'You are analyzing a video of a vineyard row.',
+		'The camera is held at an angle, 70–100 cm from the nearest row, filming downward to minimize background rows.',
 		`This is row ${rowNumber}. ${contextHint}`,
 		'',
-		'IMPORTANT counting rules:',
-		'- Only count vines in the NEAREST row — the one directly next to the camera (~70cm away). Ignore all vines in background rows.',
+		'Counting rules:',
+		'- Count every vine in the nearest row. When in doubt, count it as a vine.',
 		'- Do NOT count tall (~2m) wooden posts that hold guide wires — these are infrastructure.',
 		'- Do NOT count small wooden support poles next to individual vines — each vine may have one, but the pole is not a vine.',
 		'- DO count young vines protected by a green plastic cylinder (grow tube) — these are vines.',
-		'- Each row starts with a diagonal tension wire running from the ground up to the first pole. The first vine comes AFTER this wire. Do not count anything before it.',
+		'- Each row starts and ends with a diagonal tension wire running from the ground up to a pole. A vine may grow directly under the tension wire — still count it.',
 		'',
-		'For each vine visible in the video, determine:',
-		'- vine_index: sequential number starting from 1 (first vine seen in the video)',
-		'- bbch_pred: the BBCH phenological growth stage (integer, e.g. 9, 11, 55, 65, 71, 77, 81, 85)',
-		'- confidence: your confidence in the BBCH prediction (0.0 to 1.0)',
-		'- timestamp_sec: the time in seconds (decimal) when this vine is best visible in the video',
+		'For each vine, output:',
+		'- vine_index: sequential number starting from 1',
+		'- bbch_pred: BBCH phenological growth stage (integer, e.g. 9, 11, 55, 65, 71, 77, 81, 85)',
+		'- confidence: confidence in the BBCH prediction (0.0 to 1.0)',
+		'- timestamp_sec: time in seconds when this vine is best visible',
 		statusInstruction,
 		'',
-		'Respond ONLY with a JSON array, no other text:',
-		`[{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85, "timestamp_sec": 3.2${statusExample}}, ...]`
+		'Also output a "skipped" array listing anything you considered but decided was NOT a vine.',
+		'Each skipped item has: timestamp_sec (when it appears) and reason (why you skipped it, e.g. "wooden post", "background row vine", "support pole").',
+		'',
+		'Respond ONLY with a JSON object, no other text:',
+		`{"vines": [{"vine_index": 1, "bbch_pred": 55, "confidence": 0.85, "timestamp_sec": 3.2${statusExample}}, ...], "skipped": [{"timestamp_sec": 5.1, "reason": "wooden post"}, ...]}`
 	]
 		.filter((l) => l !== '')
 		.join('\n')
@@ -184,11 +199,25 @@ export function parseGeminiResponse(
 	isInventory: boolean = false,
 	vineyardId: string = ''
 ): AnalysisResult {
-	const parsed: GeminiVineResult[] = JSON.parse(text)
+	const raw = JSON.parse(text)
 
-	if (!Array.isArray(parsed)) {
-		throw new Error('Gemini response is not an array')
+	let parsed: GeminiVineResult[]
+	let skippedRaw: GeminiSkippedItem[] = []
+
+	if (Array.isArray(raw)) {
+		parsed = raw
+	} else if (raw && Array.isArray(raw.vines)) {
+		parsed = raw.vines
+		skippedRaw = Array.isArray(raw.skipped) ? raw.skipped : []
+	} else {
+		throw new Error('Gemini response is not an array or {vines, skipped} object')
 	}
+
+	const skipped: SkippedItem[] = skippedRaw
+		.filter(
+			(s) => typeof s.timestamp_sec === 'number' && typeof s.reason === 'string'
+		)
+		.map((s) => ({ timestamp_sec: s.timestamp_sec, reason: s.reason }))
 
 	const bbchResults: BbchResult[] = parsed.map((item) => {
 		if (
@@ -227,5 +256,5 @@ export function parseGeminiResponse(
 			})
 		: []
 
-	return { bbchResults, vineMapEntries }
+	return { bbchResults, vineMapEntries, skipped }
 }

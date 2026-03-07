@@ -22,7 +22,7 @@ describe('parseGeminiResponse', () => {
 		expect(result.bbchResults[0].bbch_pred).toBe(55)
 		expect(result.bbchResults[0].confidence).toBe(0.92)
 		expect(result.bbchResults[0].timestamp_sec).toBe(1.5)
-		expect(result.bbchResults[0].model_version).toBe('gemini-2.5-pro')
+		expect(result.bbchResults[0].model_version).toBe('gemini-2.5-flash')
 		expect(result.bbchResults[0].id).toBeTruthy()
 		expect(result.bbchResults[0].created_at).toBeTruthy()
 		expect(result.bbchResults[2].timestamp_sec).toBeUndefined()
@@ -41,7 +41,7 @@ describe('parseGeminiResponse', () => {
 		expect(result.bbchResults[1].confidence).toBe(0)
 	})
 
-	it('throws on non-array response', () => {
+	it('throws on response without vines array or top-level array', () => {
 		expect(() =>
 			parseGeminiResponse('{"vine_index": 1}', scanId, rowNumber)
 		).toThrow('not an array')
@@ -96,6 +96,54 @@ describe('parseGeminiResponse', () => {
 		expect(result.vineMapEntries[0].vine_index).toBe(1)
 		expect(result.vineMapEntries[0].status).toBe('present')
 		expect(result.vineMapEntries[1].status).toBe('missing')
+	})
+
+	it('parses {vines, skipped} object format', () => {
+		const text = JSON.stringify({
+			vines: [
+				{ vine_index: 1, bbch_pred: 55, confidence: 0.9, timestamp_sec: 1.0 }
+			],
+			skipped: [
+				{ timestamp_sec: 3.5, reason: 'wooden post' },
+				{ timestamp_sec: 7.2, reason: 'background row vine' }
+			]
+		})
+
+		const result = parseGeminiResponse(text, scanId, rowNumber)
+
+		expect(result.bbchResults).toHaveLength(1)
+		expect(result.skipped).toHaveLength(2)
+		expect(result.skipped[0].timestamp_sec).toBe(3.5)
+		expect(result.skipped[0].reason).toBe('wooden post')
+		expect(result.skipped[1].reason).toBe('background row vine')
+	})
+
+	it('returns empty skipped array for flat array format', () => {
+		const text = JSON.stringify([
+			{ vine_index: 1, bbch_pred: 55, confidence: 0.9 }
+		])
+
+		const result = parseGeminiResponse(text, scanId, rowNumber)
+
+		expect(result.skipped).toHaveLength(0)
+	})
+
+	it('filters invalid skipped items', () => {
+		const text = JSON.stringify({
+			vines: [
+				{ vine_index: 1, bbch_pred: 55, confidence: 0.9 }
+			],
+			skipped: [
+				{ timestamp_sec: 3.5, reason: 'post' },
+				{ timestamp_sec: 'bad', reason: 'invalid' },
+				{ reason: 'no timestamp' }
+			]
+		})
+
+		const result = parseGeminiResponse(text, scanId, rowNumber)
+
+		expect(result.skipped).toHaveLength(1)
+		expect(result.skipped[0].reason).toBe('post')
 	})
 
 	it('defaults unknown status to present in inventory mode', () => {
