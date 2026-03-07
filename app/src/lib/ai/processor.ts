@@ -10,15 +10,20 @@ async function setStatus(videoId: string, status: VideoStatus): Promise<void> {
 	await idb.saveRowVideo(rv)
 }
 
+export type ProgressCallback = (step: string) => void
+
 export async function processVideo(
 	videoId: string,
-	apiKey: string
+	apiKey: string,
+	onProgress?: ProgressCallback
 ): Promise<void> {
 	const rv = await idb.loadRowVideo(videoId)
 	if (!rv) throw new Error(`RowVideo ${videoId} not found`)
+	const report = onProgress ?? (() => {})
 
 	try {
 		await setStatus(videoId, 'UPLOADING')
+		report('Uploading video…')
 
 		const blob = await idb.loadVideoBlob(videoId)
 		if (!blob) throw new Error('Video blob not found')
@@ -26,6 +31,7 @@ export async function processVideo(
 		const file = await uploadVideo(apiKey, blob)
 
 		await setStatus(videoId, 'PROCESSING')
+		report('Analyzing with Gemini…')
 
 		const scan = await idb.loadScan(rv.scan_id)
 		const isInventory = scan?.is_inventory ?? false
@@ -61,7 +67,10 @@ export async function processVideo(
 			await idb.saveBbchResult(bbch)
 		}
 
-		for (const bbch of result.bbchResults) {
+		const total = result.bbchResults.length
+		for (let i = 0; i < total; i++) {
+			const bbch = result.bbchResults[i]
+			report(`Extracting thumbnail ${i + 1}/${total} (vine ${bbch.vine_index})…`)
 			if (bbch.timestamp_sec != null) {
 				try {
 					const frame = await extractFrame(blob, bbch.timestamp_sec)

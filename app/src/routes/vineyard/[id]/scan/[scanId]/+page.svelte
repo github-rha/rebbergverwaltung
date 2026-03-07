@@ -26,9 +26,24 @@
 	let confirmingDelete = $state(false)
 	let processingId: string | null = $state(null)
 	let processError: string | null = $state(null)
+	let processStep: string = $state('')
+	let elapsedSec: number = $state(0)
+	let timerInterval: ReturnType<typeof setInterval> | null = $state(null)
 	let online = $state(true)
 	let fileInput: HTMLInputElement | undefined = $state(undefined)
 	let uploadingFile = $state(false)
+
+	function startTimer() {
+		elapsedSec = 0
+		timerInterval = setInterval(() => (elapsedSec += 1), 1000)
+	}
+
+	function stopTimer() {
+		if (timerInterval) {
+			clearInterval(timerInterval)
+			timerInterval = null
+		}
+	}
 
 	function dirIcon(dir: string): string {
 		if (!vineyard || vineyard.direction_label === 'top_bottom') {
@@ -78,12 +93,18 @@
 		}
 		processingId = videoId
 		processError = null
+		processStep = ''
+		startTimer()
 		try {
-			await processRowVideo(scanId, videoId, apiKey)
+			await processRowVideo(scanId, videoId, apiKey, (step) => {
+				processStep = step
+			})
 		} catch (err) {
 			processError = err instanceof Error ? err.message : 'Processing failed'
 		} finally {
+			stopTimer()
 			processingId = null
+			processStep = ''
 		}
 	}
 
@@ -98,11 +119,15 @@
 			return
 		}
 		processError = null
+		processStep = ''
+		startTimer()
 		for (const video of $rowVideos) {
 			if (video.status === 'LOCAL_ONLY' || video.status === 'FAILED') {
 				processingId = video.id
 				try {
-					await processRowVideo(scanId, video.id, apiKey)
+					await processRowVideo(scanId, video.id, apiKey, (step) => {
+						processStep = step
+					})
 				} catch (err) {
 					processError =
 						err instanceof Error ? err.message : 'Processing failed'
@@ -110,7 +135,9 @@
 				}
 			}
 		}
+		stopTimer()
 		processingId = null
+		processStep = ''
 	}
 
 	async function handlePurge() {
@@ -262,7 +289,10 @@
 									</button>
 								{/if}
 								{#if processingId === video.id}
-									<span class="text-xs text-blue-600">Processing…</span>
+									<span class="text-xs text-blue-600">
+										{processStep || 'Processing…'}
+										<span class="text-gray-400 ml-1">{elapsedSec}s</span>
+									</span>
 								{/if}
 								<span
 									class="text-xs px-2 py-1 rounded {video.status === 'DONE'
