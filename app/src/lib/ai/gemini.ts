@@ -134,7 +134,7 @@ export async function analyzeRowVideo(
 		'Counting rules:',
 		'- Count every vine in the nearest row. When in doubt, count it as a vine.',
 		'- Do NOT count tall (~2m) wooden posts that hold guide wires — these are infrastructure.',
-		'- Do NOT count small wooden support poles next to individual vines — each vine may have one, but the pole is not a vine.',
+		'- Every vine has a small wooden support pole right next to it (roughly the same size). The vine+pole pair is ONE vine. Do not count the pole separately.',
 		'- DO count young vines protected by a green plastic cylinder (grow tube) — these are vines.',
 		'- Each row starts and ends with a diagonal tension wire running from the ground up to a pole. A vine may grow directly under the tension wire — still count it.',
 		'',
