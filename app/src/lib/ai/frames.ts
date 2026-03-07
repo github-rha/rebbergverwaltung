@@ -1,3 +1,5 @@
+const TIMEOUT_MS = 10_000
+
 export async function extractFrame(
 	videoBlob: Blob,
 	timestampSec: number
@@ -5,11 +7,18 @@ export async function extractFrame(
 	const url = URL.createObjectURL(videoBlob)
 	try {
 		return await new Promise<Blob>((resolve, reject) => {
+			const timer = setTimeout(() => {
+				video.src = ''
+				reject(new Error('Frame extraction timed out'))
+			}, TIMEOUT_MS)
+
 			const video = document.createElement('video')
 			video.muted = true
 			video.preload = 'auto'
+			video.playsInline = true
 
 			video.onerror = () => {
+				clearTimeout(timer)
 				reject(new Error('Failed to load video for frame extraction'))
 			}
 
@@ -18,6 +27,7 @@ export async function extractFrame(
 			}
 
 			video.onseeked = () => {
+				clearTimeout(timer)
 				const canvas = document.createElement('canvas')
 				canvas.width = video.videoWidth
 				canvas.height = video.videoHeight
