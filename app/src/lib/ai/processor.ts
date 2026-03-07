@@ -1,5 +1,6 @@
 import * as idb from '$lib/storage/idb.js'
 import { uploadVideo, analyzeRowVideo } from '$lib/ai/gemini.js'
+import { extractFrame } from '$lib/ai/frames.js'
 import type { VideoStatus } from '$lib/models/types.js'
 
 async function setStatus(videoId: string, status: VideoStatus): Promise<void> {
@@ -58,6 +59,17 @@ export async function processVideo(
 
 		for (const bbch of result.bbchResults) {
 			await idb.saveBbchResult(bbch)
+		}
+
+		for (const bbch of result.bbchResults) {
+			if (bbch.timestamp_sec != null) {
+				try {
+					const frame = await extractFrame(blob, bbch.timestamp_sec)
+					await idb.saveThumbnail(bbch.id, frame)
+				} catch {
+					// frame extraction is best-effort
+				}
+			}
 		}
 
 		if (isInventory && result.vineMapEntries.length > 0) {

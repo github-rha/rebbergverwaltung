@@ -77,6 +77,7 @@ export async function deleteScan(id: string): Promise<void> {
 		await del(videoBlobKey(v.id))
 		await del(rowVideoKey(v.id))
 	}
+	await deleteThumbnails(id)
 	await deleteBbchResults(id)
 	await del(scanKey(id))
 }
@@ -211,6 +212,32 @@ export async function deleteVineMap(vineyardId: string): Promise<void> {
 	for (const k of vmKeys) {
 		const vm = await get<VineMap>(k)
 		if (vm && vm.vineyard_id === vineyardId) await del(k)
+	}
+}
+
+// --- Thumbnails ---
+
+function thumbnailKey(bbchResultId: string): string {
+	return `thumb:${bbchResultId}`
+}
+
+export async function saveThumbnail(
+	bbchResultId: string,
+	blob: Blob
+): Promise<void> {
+	await set(thumbnailKey(bbchResultId), blob)
+}
+
+export async function loadThumbnail(
+	bbchResultId: string
+): Promise<Blob | undefined> {
+	return get<Blob>(thumbnailKey(bbchResultId))
+}
+
+export async function deleteThumbnails(scanId: string): Promise<void> {
+	const results = await loadBbchResults(scanId)
+	for (const r of results) {
+		await del(thumbnailKey(r.id))
 	}
 }
 

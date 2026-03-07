@@ -23,6 +23,8 @@ import {
 	saveVineMapEntries,
 	loadVineMap,
 	deleteVineMap,
+	saveThumbnail,
+	loadThumbnail,
 	saveSettings,
 	loadSettings
 } from '$lib/storage/idb.js'
@@ -454,6 +456,50 @@ describe('purgeVideoBlob', () => {
 		const updated = await loadRowVideo(id)
 		expect(updated).toBeDefined()
 		expect(updated!.local_uri).toBe('')
+	})
+})
+
+describe('thumbnail storage', () => {
+	it('saves and loads a thumbnail', async () => {
+		const id = createId()
+		const blob = new Blob(['jpeg data'], { type: 'image/jpeg' })
+		await saveThumbnail(id, blob)
+		const loaded = await loadThumbnail(id)
+		expect(loaded).toBeInstanceOf(Blob)
+		expect(loaded!.size).toBe(blob.size)
+	})
+
+	it('returns undefined for missing thumbnail', async () => {
+		expect(await loadThumbnail('nonexistent')).toBeUndefined()
+	})
+
+	it('deleting a scan cascades to thumbnails', async () => {
+		const scanId = createId()
+		const s: Scan = {
+			id: scanId,
+			vineyard_id: createId(),
+			created_at: createTimestamp(),
+			note: '',
+			is_inventory: false
+		}
+		const resultId = createId()
+		const r: BbchResult = {
+			id: resultId,
+			scan_id: scanId,
+			row_number: 1,
+			vine_index: 1,
+			bbch_pred: 55,
+			confidence: 0.9,
+			model_version: 'gemini-2.5-flash',
+			created_at: createTimestamp()
+		}
+		await saveScan(s)
+		await saveBbchResult(r)
+		await saveThumbnail(resultId, new Blob(['img'], { type: 'image/jpeg' }))
+
+		await deleteScan(scanId)
+
+		expect(await loadThumbnail(resultId)).toBeUndefined()
 	})
 })
 

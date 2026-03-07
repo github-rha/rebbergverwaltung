@@ -9,7 +9,10 @@
 	const rowNumber = $derived(Number(page.params.row))
 	const vineIndex = $derived(Number(page.params.vine))
 
+	import { onDestroy } from 'svelte'
+
 	let timeSeries: {
+		id: string
 		date: string
 		bbch: number
 		confidence: number
@@ -18,6 +21,13 @@
 	}[] = $state([])
 	let vineStatus: VineMap | undefined = $state(undefined)
 	let maxVineInRow = $state(1)
+	let thumbnailUrls: Record<string, string> = $state({})
+
+	onDestroy(() => {
+		for (const url of Object.values(thumbnailUrls)) {
+			URL.revokeObjectURL(url)
+		}
+	})
 
 	async function loadData(vid: string, row: number, vine: number) {
 		const scans = await idb.listScans(vid)
@@ -31,6 +41,7 @@
 			)
 			if (match) {
 				series.push({
+					id: match.id,
 					date: scan.created_at,
 					bbch: match.bbch_pred,
 					confidence: match.confidence,
@@ -59,6 +70,18 @@
 			}
 		}
 		maxVineInRow = max
+
+		for (const url of Object.values(thumbnailUrls)) {
+			URL.revokeObjectURL(url)
+		}
+		const urls: Record<string, string> = {}
+		for (const s of series) {
+			const blob = await idb.loadThumbnail(s.id)
+			if (blob) {
+				urls[s.id] = URL.createObjectURL(blob)
+			}
+		}
+		thumbnailUrls = urls
 	}
 
 	$effect(() => {
@@ -141,6 +164,28 @@
 				{/each}
 			</div>
 		</div>
+
+		{#if timeSeries.some((p) => thumbnailUrls[p.id])}
+			<div>
+				<h3 class="font-medium mb-2">Snapshots</h3>
+				<div class="flex gap-2 overflow-x-auto">
+					{#each timeSeries as point (point.id)}
+						{#if thumbnailUrls[point.id]}
+							<div class="flex-shrink-0">
+								<img
+									src={thumbnailUrls[point.id]}
+									alt="Vine {vineIndex} at {point.timestamp_sec?.toFixed(1)}s"
+									class="h-32 rounded border border-gray-200"
+								/>
+								<p class="text-[9px] text-gray-500 text-center mt-1">
+									{formatDate(point.date)} · BBCH {formatBbch(point.bbch)}
+								</p>
+							</div>
+						{/if}
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		<div>
 			<h3 class="font-medium mb-2">Details</h3>
