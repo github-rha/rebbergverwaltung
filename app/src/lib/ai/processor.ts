@@ -1,6 +1,6 @@
 import * as idb from '$lib/storage/idb.js'
 import { uploadVideo, analyzeRowVideo } from '$lib/ai/gemini.js'
-import { extractFrame } from '$lib/ai/frames.js'
+import { extractFrames } from '$lib/ai/frames.js'
 import type { VideoStatus } from '$lib/models/types.js'
 
 async function setStatus(videoId: string, status: VideoStatus): Promise<void> {
@@ -71,17 +71,19 @@ export async function processVideo(
 			await idb.saveSkippedItems(videoId, result.skipped)
 		}
 
-		const total = result.bbchResults.length
-		for (let i = 0; i < total; i++) {
-			const bbch = result.bbchResults[i]
-			report(`Extracting thumbnail ${i + 1}/${total} (vine ${bbch.vine_index})…`)
-			if (bbch.timestamp_sec != null) {
-				try {
-					const frame = await extractFrame(blob, bbch.timestamp_sec)
-					await idb.saveThumbnail(bbch.id, frame)
-				} catch {
-					// frame extraction is best-effort
+		const timestamps = result.bbchResults
+			.filter((b) => b.timestamp_sec != null)
+			.map((b) => ({ id: b.id, sec: b.timestamp_sec! }))
+
+		if (timestamps.length > 0) {
+			report(`Extracting thumbnails (${timestamps.length} vines)…`)
+			try {
+				const frames = await extractFrames(blob, timestamps)
+				for (const [id, frame] of frames) {
+					await idb.saveThumbnail(id, frame)
 				}
+			} catch {
+				// frame extraction is best-effort
 			}
 		}
 
