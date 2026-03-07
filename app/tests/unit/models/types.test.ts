@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createId, createTimestamp } from '$lib/models/types.js'
+import { createId, createTimestamp, formatBbch } from '$lib/models/types.js'
 import type {
 	Vineyard,
 	Scan,
@@ -30,6 +30,19 @@ describe('createTimestamp', () => {
 	it('returns a valid ISO 8601 string', () => {
 		const ts = createTimestamp()
 		expect(new Date(ts).toISOString()).toBe(ts)
+	})
+})
+
+describe('formatBbch', () => {
+	it('pads single digit to two digits', () => {
+		expect(formatBbch(0)).toBe('00')
+		expect(formatBbch(9)).toBe('09')
+	})
+
+	it('keeps two-digit values as-is', () => {
+		expect(formatBbch(11)).toBe('11')
+		expect(formatBbch(55)).toBe('55')
+		expect(formatBbch(89)).toBe('89')
 	})
 })
 

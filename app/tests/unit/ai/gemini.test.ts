@@ -65,6 +65,15 @@ describe('parseGeminiResponse', () => {
 		expect(() => parseGeminiResponse('not json', scanId, rowNumber)).toThrow()
 	})
 
+	it('ignores non-numeric timestamp_sec', () => {
+		const text = JSON.stringify([
+			{ vine_index: 1, bbch_pred: 55, confidence: 0.9, timestamp_sec: 'early' }
+		])
+
+		const result = parseGeminiResponse(text, scanId, rowNumber)
+		expect(result.bbchResults[0].timestamp_sec).toBeUndefined()
+	})
+
 	it('produces VineMap entries for inventory scans', () => {
 		const vineyardId = createId()
 		const text = JSON.stringify([

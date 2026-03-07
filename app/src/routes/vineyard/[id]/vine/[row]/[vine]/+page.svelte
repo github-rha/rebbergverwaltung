@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { resolve } from '$app/paths'
 	import { page } from '$app/state'
-	import { onMount } from 'svelte'
 	import * as idb from '$lib/storage/idb.js'
 	import { formatBbch } from '$lib/models/types.js'
 	import type { VineMap } from '$lib/models/types.js'
@@ -20,14 +19,15 @@
 	let vineStatus: VineMap | undefined = $state(undefined)
 	let maxVineInRow = $state(1)
 
-	onMount(async () => {
-		const scans = await idb.listScans(vineyardId)
+	async function loadData(vid: string, row: number, vine: number) {
+		const scans = await idb.listScans(vid)
 		const series: typeof timeSeries = []
+		let max = 1
 
 		for (const scan of scans) {
 			const results = await idb.loadBbchResults(scan.id)
 			const match = results.find(
-				(r) => r.row_number === rowNumber && r.vine_index === vineIndex
+				(r) => r.row_number === row && r.vine_index === vine
 			)
 			if (match) {
 				series.push({
@@ -39,8 +39,8 @@
 				})
 			}
 			for (const r of results) {
-				if (r.row_number === rowNumber && r.vine_index > maxVineInRow) {
-					maxVineInRow = r.vine_index
+				if (r.row_number === row && r.vine_index > max) {
+					max = r.vine_index
 				}
 			}
 		}
@@ -49,15 +49,20 @@
 			(a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
 		)
 
-		const vineMap = await idb.loadVineMap(vineyardId)
+		const vineMap = await idb.loadVineMap(vid)
 		vineStatus = vineMap.find(
-			(v) => v.row_number === rowNumber && v.vine_index === vineIndex
+			(v) => v.row_number === row && v.vine_index === vine
 		)
 		for (const v of vineMap) {
-			if (v.row_number === rowNumber && v.vine_index > maxVineInRow) {
-				maxVineInRow = v.vine_index
+			if (v.row_number === row && v.vine_index > max) {
+				max = v.vine_index
 			}
 		}
+		maxVineInRow = max
+	}
+
+	$effect(() => {
+		loadData(vineyardId, rowNumber, vineIndex)
 	})
 
 	function formatDate(iso: string): string {
